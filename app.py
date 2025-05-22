@@ -2,7 +2,7 @@ import webview
 from server import app
 
 
-def open_file_dialog():
+def open_file_dialog(self=None):
     import tkinter as tk
     from tkinter import filedialog
     root = tk.Tk()
@@ -20,7 +20,7 @@ def open_file_dialog():
     return file_path
 
 
-def open_folder_dialog():
+def open_folder_dialog(self=None):
     import tkinter as tk
     from tkinter import filedialog
     root = tk.Tk()

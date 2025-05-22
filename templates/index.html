@@ -1,33 +1,148 @@
 <!DOCTYPE html>
-<html>
+<html lang="ko">
 <head>
   <meta charset="utf-8">
-  <title>Doc Translator</title>
-  <link rel="stylesheet" href="/static/css/style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>문서 번역 프로그램</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+    }
+    #main-panel {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+    #left-panel, #right-panel {
+      flex: 1;
+      overflow: auto;
+      padding: 1rem;
+    }
+    #viewer-container {
+      height: 100%;
+    }
+    #file-list {
+      max-height: 60vh;
+      overflow-y: auto;
+    }
+    #sidebarToggle {
+      position: absolute;
+      right: -12px;
+      top: 10px;
+      background: white;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+      z-index: 10;
+    }
+  </style>
 </head>
-<body>
-<div id="container">
-  <button id="sidebar-toggle" onclick="toggleSidebar()">≡</button>
-  <div id="sidebar">
-    <button onclick="triggerFileSelect()">파일선택</button>
-    <button onclick="triggerFolderSelect()">폴더선택</button>
-    <ul id="file-list"></ul>
-    <div id="translation-panel">
-      <button id="translate-btn">번역하기</button>
+<body class="bg-neutral-100 flex flex-col h-screen">
+  <header class="bg-blue-700 text-white flex items-center justify-between px-4 py-2 shadow-md">
+    <div class="flex items-center space-x-4">
+      <button class="p-2 rounded-md hover:bg-blue-600 transition-colors" id="folderButton" onclick="triggerFolderSelect()">
+        <span class="material-icons">folder_open</span>
+      </button>
+      <button class="p-2 rounded-md hover:bg-blue-600 transition-colors" id="fileButton" onclick="triggerFileSelect()">
+        <span class="material-icons">insert_drive_file</span>
+      </button>
     </div>
-  </div>
-  <div id="main-panel">
-    <div id="left-panel">
-      <div id="viewer-container"></div>
-      <div id="page-controls" class="hidden">
-        <button id="prev-page">◀</button>
-        <span id="page-info"></span>
-        <button id="next-page">▶</button>
+    <div class="flex items-center space-x-3">
+      <button id="translate-btn" class="px-4 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 transition-colors">
+        번역하기
+      </button>
+      <div class="flex items-center space-x-1 text-neutral-300">
+        <button class="p-1 hover:bg-blue-600 rounded-sm transition-colors"><span class="material-icons text-lg">minimize</span></button>
+        <button class="p-1 hover:bg-blue-600 rounded-sm transition-colors"><span class="material-icons text-lg">crop_square</span></button>
+        <button class="p-1 hover:bg-blue-600 rounded-sm transition-colors"><span class="material-icons text-lg">close</span></button>
       </div>
     </div>
-    <div id="right-panel">오른쪽 패널</div>
+  </header>
+
+  <div class="flex flex-1 overflow-hidden relative">
+    <!-- 사이드바 토글 버튼 -->
+    <button class="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-6 h-12 bg-white border border-neutral-300 rounded-r-md flex items-center justify-center shadow-md hover:bg-neutral-100 transition-colors" id="sidebarToggle">
+      <span class="material-icons text-neutral-600">chevron_right</span>
+    </button>
+    
+    <!-- 사이드바 -->
+    <aside class="w-64 bg-neutral-50 border-r border-neutral-300 transition-all duration-300 ease-in-out overflow-y-auto" id="sidebar">
+      <div class="p-4">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-lg font-semibold text-neutral-700">문서 목록</h2>
+        </div>
+        <ul id="file-list" class="space-y-2">
+          <!-- 파일 목록이 여기에 동적으로 추가됩니다 -->
+        </ul>
+      </div>
+    </aside>
+
+    <div id="main-panel" class="flex-1 bg-white">
+      <div id="left-panel">
+        <div id="viewer-container" class="h-full">
+          <div class="flex items-center justify-center h-full text-neutral-400">
+            <p>문서를 선택하거나 새로 업로드해주세요.</p>
+          </div>
+        </div>
+        <div id="page-controls" class="hidden flex items-center justify-center space-x-4 p-2 border-t border-neutral-200">
+          <button id="prev-page" class="p-2 hover:bg-neutral-100 rounded-full">
+            <span class="material-icons">chevron_left</span>
+          </button>
+          <span id="page-info" class="text-sm text-neutral-600"></span>
+          <button id="next-page" class="p-2 hover:bg-neutral-100 rounded-full">
+            <span class="material-icons">chevron_right</span>
+          </button>
+        </div>
+      </div>
+      
+      <div id="right-panel" class="border-l border-neutral-200 bg-neutral-50 p-4">
+        <div class="text-neutral-500 text-center py-8">
+          번역된 내용이 여기에 표시됩니다.
+        </div>
+      </div>
+    </div>
   </div>
-</div>
-<script src="/static/js/frontend.js"></script>
+
+  <script src="/static/js/frontend.js"></script>
+  <script>
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    
+    function toggleSidebar() {
+      const isCollapsed = sidebar.classList.toggle('w-0');
+      sidebar.classList.toggle('w-64');
+      
+      const icon = sidebarToggle.querySelector('.material-icons');
+      if (isCollapsed) {
+        sidebar.style.visibility = 'hidden';
+        icon.textContent = 'chevron_right';
+        sidebarToggle.style.left = '0';
+      } else {
+        sidebar.style.visibility = 'visible';
+        icon.textContent = 'chevron_left';
+        sidebarToggle.style.left = '256px'; // 사이드바 너비만큼 이동
+      }
+    }
+
+    // 사이드바 토글 버튼 이벤트 리스너
+    if (sidebarToggle) {
+      sidebarToggle.addEventListener('click', toggleSidebar);
+    }
+    
+    // 초기 상태 설정
+    document.addEventListener('DOMContentLoaded', function() {
+      // 사이드바가 기본으로 열려있도록 설정
+      sidebar.style.visibility = 'visible';
+      sidebarToggle.style.left = '256px';
+      sidebarToggle.querySelector('.material-icons').textContent = 'chevron_left';
+    });
+  </script>
 </body>
 </html>
