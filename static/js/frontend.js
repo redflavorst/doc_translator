@@ -70,10 +70,13 @@ async function selectFolder(folderPath) {
     const li = document.createElement('li');
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
+
+    checkbox.value = file.path;
+    checkbox.classList.add('file-checkbox');
     const span = document.createElement('span');
-    span.className = 'file-name';
     span.textContent = file.name + ' (' + file.lang + ')';
-    span.onclick = () => loadPDFView(file.path, 1);
+    span.onclick = () => loadPDFView(file.path);
+
     li.appendChild(checkbox);
     li.appendChild(span);
     fileList.appendChild(li);
@@ -137,3 +140,15 @@ function startTranslation(filePath) {
     body: JSON.stringify({ path: filePath })
   });
 }
+
+function translateSelected() {
+  const checked = document.querySelectorAll('.file-checkbox:checked');
+  checked.forEach(cb => {
+    startTranslation(cb.value);
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById('translate-btn');
+  if (btn) btn.addEventListener('click', translateSelected);
+});
