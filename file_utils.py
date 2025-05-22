@@ -11,14 +11,22 @@ def extract_text_from_pdf(file_path: Path) -> str:
         return ""
 
 
-def scan_foreign_docs(folder_path: str):
+def scan_pdfs(folder_path: str):
+    """Scan ``folder_path`` recursively and return info for all PDF files."""
+
     result = []
     for path in Path(folder_path).rglob("*.pdf"):
         text = extract_text_from_pdf(path)
+
         try:
             lang = detect(text)
         except Exception:
-            lang = 'unknown'
-        if lang not in ('ko', 'unknown'):
-            result.append({'name': path.name, 'path': str(path), 'lang': lang})
+            lang = "unknown"
+
+        result.append({"name": path.name, "path": str(path), "lang": lang})
+
     return result
+
+
+# Backwards compatibility
+scan_foreign_docs = scan_pdfs

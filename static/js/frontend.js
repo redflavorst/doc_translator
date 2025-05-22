@@ -11,6 +11,7 @@ function toggleSidebar() {
   }
 }
 
+
   async function selectFolder(folderPath) {
     const response = await fetch('/api/select-folder', {
       method: 'POST',
@@ -35,6 +36,37 @@ function toggleSidebar() {
 
   function addFileItem(file) {
     const fileList = document.getElementById('file-list');
+
+function addFileToList(filePath) {
+  const fileList = document.getElementById('file-list');
+  const li = document.createElement('li');
+  const name = filePath.split(/[/\\]/).pop();
+  li.textContent = name;
+  if (name.toLowerCase().endsWith('.pdf')) {
+    li.onclick = () => loadPDFView(filePath);
+  }
+  fileList.appendChild(li);
+}
+
+function triggerFileSelect() {
+  window.pywebview.api.open_file_dialog().then(filePath => {
+    if (filePath) {
+      addFileToList(filePath);
+    }
+  });
+}
+
+async function selectFolder(folderPath) {
+  const response = await fetch('/api/select-folder', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path: folderPath })
+  });
+  const data = await response.json();
+  const fileList = document.getElementById('file-list');
+  fileList.innerHTML = '';
+  data.files.forEach(file => {
+
     const li = document.createElement('li');
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
