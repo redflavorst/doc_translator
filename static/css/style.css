@@ -53,3 +53,33 @@
   overflow-y: auto;
   border-left: 1px solid #eee;
 }
+
+/* file list */
+#file-list li {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+#file-list li:hover {
+  background: #eaeaea;
+}
+
+#file-list .file-name {
+  margin-left: 5px;
+  flex: 1;
+}
+
+#page-controls {
+  text-align: center;
+  margin-top: 10px;
+}
+
+#page-controls button {
+  margin: 0 5px;
+}
+
+.hidden {
+  display: none;
+}

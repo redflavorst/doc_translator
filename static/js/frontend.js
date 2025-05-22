@@ -11,6 +11,32 @@ function toggleSidebar() {
   }
 }
 
+
+  async function selectFolder(folderPath) {
+    const response = await fetch('/api/select-folder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: folderPath })
+    });
+    const data = await response.json();
+    const fileList = document.getElementById('file-list');
+    fileList.innerHTML = '';
+    data.files.forEach(file => addFileItem(file));
+  }
+
+  async function selectFile(filePath) {
+    const response = await fetch('/api/select-file', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: filePath })
+    });
+    const file = await response.json();
+    addFileItem(file);
+  }
+
+  function addFileItem(file) {
+    const fileList = document.getElementById('file-list');
+
 function addFileToList(filePath) {
   const fileList = document.getElementById('file-list');
   const li = document.createElement('li');
@@ -40,33 +66,69 @@ async function selectFolder(folderPath) {
   const fileList = document.getElementById('file-list');
   fileList.innerHTML = '';
   data.files.forEach(file => {
+
     const li = document.createElement('li');
-    li.textContent = file.name + ' (' + file.lang + ')';
-    li.onclick = () => loadPDFView(file.path);
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    const span = document.createElement('span');
+    span.className = 'file-name';
+    span.textContent = file.name + ' (' + file.lang + ')';
+    span.onclick = () => loadPDFView(file.path, 1);
+    li.appendChild(checkbox);
+    li.appendChild(span);
     fileList.appendChild(li);
-  });
-}
+  }
 
-function triggerFolderSelect() {
-  window.pywebview.api.open_folder_dialog().then(folderPath => {
-    if (folderPath) {
-      selectFolder(folderPath);
+  function triggerFolderSelect() {
+    window.pywebview.api.open_folder_dialog().then(folderPath => {
+      if (folderPath) {
+        selectFolder(folderPath);
+      }
+    });
+  }
+
+  function triggerFileSelect() {
+    window.pywebview.api.open_file_dialog().then(filePath => {
+      if (filePath) {
+        selectFile(filePath);
+      }
+    });
+  }
+
+  let currentFile = null;
+  let currentPage = 1;
+  let totalPages = 1;
+
+  function loadPDFView(filePath, page) {
+    fetch('/api/view-pdf', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: filePath, page: page })
+    })
+    .then(res => res.json())
+    .then(data => {
+      const viewer = document.getElementById('viewer-container');
+      viewer.innerHTML = '<img src="data:image/png;base64,' + data.image + '">';
+      currentFile = filePath;
+      currentPage = page;
+      totalPages = data.total_pages;
+      document.getElementById('page-info').textContent = page + ' / ' + totalPages;
+      const controls = document.getElementById('page-controls');
+      controls.classList.toggle('hidden', totalPages <= 1);
+    });
+  }
+
+  document.getElementById('prev-page').onclick = () => {
+    if (currentPage > 1) {
+      loadPDFView(currentFile, currentPage - 1);
     }
-  });
-}
+  };
 
-function loadPDFView(filePath) {
-  fetch('/api/view-pdf', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ path: filePath })
-  })
-  .then(res => res.json())
-  .then(data => {
-    const left = document.getElementById('left-panel');
-    left.innerHTML = '<img src="data:image/png;base64,' + data.image + '">';
-  });
-}
+  document.getElementById('next-page').onclick = () => {
+    if (currentPage < totalPages) {
+      loadPDFView(currentFile, currentPage + 1);
+    }
+  };
 
 function startTranslation(filePath) {
   fetch('/api/translate', {
