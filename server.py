@@ -18,7 +18,7 @@ def index():
 @app.route('/api/select-folder', methods=['POST'])
 def select_folder():
     folder_path = request.json.get('path')
-    files = file_utils.scan_foreign_docs(folder_path)
+    files = file_utils.scan_pdfs(folder_path)
     return jsonify({'files': files})
 
 
