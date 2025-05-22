@@ -1,6 +1,14 @@
 function toggleSidebar() {
   const sidebar = document.getElementById('sidebar');
+  const toggleBtn = document.getElementById('sidebar-toggle');
   sidebar.classList.toggle('hidden');
+  
+  // 토글 버튼 위치 조정 (사이드바가 열려있으면 오른쪽으로, 닫혀있으면 왼쪽으로)
+  if (sidebar.classList.contains('hidden')) {
+    toggleBtn.style.left = '0';
+  } else {
+    toggleBtn.style.left = '250px'; // 사이드바 너비와 동일하게 조정
+  }
 }
 
 async function selectFolder(folderPath) {

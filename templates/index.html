@@ -7,8 +7,8 @@
 </head>
 <body>
 <div id="container">
+  <button id="sidebar-toggle" onclick="toggleSidebar()">≡</button>
   <div id="sidebar">
-    <button onclick="toggleSidebar()">≡</button>
     <button onclick="window.pywebview.api.open_file_dialog()">파일선택</button>
     <button onclick="triggerFolderSelect()">폴더선택</button>
     <ul id="file-list"></ul>

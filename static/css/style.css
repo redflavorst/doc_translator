@@ -1,24 +1,55 @@
 #container {
   display: flex;
   height: 100vh;
+  position: relative;
 }
+
+#sidebar-toggle {
+  position: fixed;
+  left: 250px;
+  top: 10px;
+  z-index: 1000;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: left 0.3s;
+}
+
 #sidebar {
   width: 250px;
-  transition: width 0.3s;
+  transition: transform 0.3s ease-in-out;
   overflow: auto;
   border-right: 1px solid #ccc;
+  background: #f5f5f5;
+  height: 100%;
+  position: relative;
+  z-index: 100;
+  flex-shrink: 0;
 }
+
 #sidebar.hidden {
-  width: 0;
+  transform: translateX(-100%);
 }
+
 #main-panel {
   flex: 1;
   display: flex;
-  transition: margin 0.3s;
+  transition: margin-left 0.3s;
+  height: 100%;
+  overflow: hidden;
+  margin-left: 0;
 }
+
+/* 사이드바가 열려있을 때 메인 패널에 여백 추가 */
+#sidebar:not(.hidden) + #main-panel {
+  margin-left: 250px;
+}
+
 #left-panel, #right-panel {
   flex: 1;
   padding: 10px;
   overflow-y: auto;
-  border-left: 1px solid #ccc;
+  border-left: 1px solid #eee;
 }
