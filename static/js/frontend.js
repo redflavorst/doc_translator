@@ -11,6 +11,51 @@ function toggleSidebar() {
   }
 }
 
+
+  async function selectFolder(folderPath) {
+    const response = await fetch('/api/select-folder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: folderPath })
+    });
+    const data = await response.json();
+    const fileList = document.getElementById('file-list');
+    fileList.innerHTML = '';
+    data.files.forEach(file => addFileItem(file));
+  }
+
+  async function selectFile(filePath) {
+    const response = await fetch('/api/select-file', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: filePath })
+    });
+    const file = await response.json();
+    addFileItem(file);
+  }
+
+  function addFileItem(file) {
+    const fileList = document.getElementById('file-list');
+
+function addFileToList(filePath) {
+  const fileList = document.getElementById('file-list');
+  const li = document.createElement('li');
+  const name = filePath.split(/[/\\]/).pop();
+  li.textContent = name;
+  if (name.toLowerCase().endsWith('.pdf')) {
+    li.onclick = () => loadPDFView(filePath);
+  }
+  fileList.appendChild(li);
+}
+
+function triggerFileSelect() {
+  window.pywebview.api.open_file_dialog().then(filePath => {
+    if (filePath) {
+      addFileToList(filePath);
+    }
+  });
+}
+
 async function selectFolder(folderPath) {
   const response = await fetch('/api/select-folder', {
     method: 'POST',
@@ -21,40 +66,72 @@ async function selectFolder(folderPath) {
   const fileList = document.getElementById('file-list');
   fileList.innerHTML = '';
   data.files.forEach(file => {
+
     const li = document.createElement('li');
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
+
     checkbox.value = file.path;
     checkbox.classList.add('file-checkbox');
     const span = document.createElement('span');
     span.textContent = file.name + ' (' + file.lang + ')';
     span.onclick = () => loadPDFView(file.path);
+
     li.appendChild(checkbox);
     li.appendChild(span);
     fileList.appendChild(li);
-  });
-}
+  }
 
-function triggerFolderSelect() {
-  window.pywebview.api.open_folder_dialog().then(folderPath => {
-    if (folderPath) {
-      selectFolder(folderPath);
+  function triggerFolderSelect() {
+    window.pywebview.api.open_folder_dialog().then(folderPath => {
+      if (folderPath) {
+        selectFolder(folderPath);
+      }
+    });
+  }
+
+  function triggerFileSelect() {
+    window.pywebview.api.open_file_dialog().then(filePath => {
+      if (filePath) {
+        selectFile(filePath);
+      }
+    });
+  }
+
+  let currentFile = null;
+  let currentPage = 1;
+  let totalPages = 1;
+
+  function loadPDFView(filePath, page) {
+    fetch('/api/view-pdf', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: filePath, page: page })
+    })
+    .then(res => res.json())
+    .then(data => {
+      const viewer = document.getElementById('viewer-container');
+      viewer.innerHTML = '<img src="data:image/png;base64,' + data.image + '">';
+      currentFile = filePath;
+      currentPage = page;
+      totalPages = data.total_pages;
+      document.getElementById('page-info').textContent = page + ' / ' + totalPages;
+      const controls = document.getElementById('page-controls');
+      controls.classList.toggle('hidden', totalPages <= 1);
+    });
+  }
+
+  document.getElementById('prev-page').onclick = () => {
+    if (currentPage > 1) {
+      loadPDFView(currentFile, currentPage - 1);
     }
-  });
-}
+  };
 
-function loadPDFView(filePath) {
-  fetch('/api/view-pdf', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ path: filePath })
-  })
-  .then(res => res.json())
-  .then(data => {
-    const left = document.getElementById('left-panel');
-    left.innerHTML = '<img src="data:image/png;base64,' + data.image + '">';
-  });
-}
+  document.getElementById('next-page').onclick = () => {
+    if (currentPage < totalPages) {
+      loadPDFView(currentFile, currentPage + 1);
+    }
+  };
 
 function startTranslation(filePath) {
   fetch('/api/translate', {
