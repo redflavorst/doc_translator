@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Doc Translator</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div id="container">
+  <div id="sidebar">
+    <button onclick="toggleSidebar()">≡</button>
+    <button onclick="window.pywebview.api.open_file_dialog()">파일선택</button>
+    <button onclick="triggerFolderSelect()">폴더선택</button>
+    <ul id="file-list"></ul>
+  </div>
+  <div id="main-panel">
+    <div id="left-panel">왼쪽 패널</div>
+    <div id="right-panel">오른쪽 패널</div>
+  </div>
+</div>
+<script src="/static/js/frontend.js"></script>
+</body>
+</html>
