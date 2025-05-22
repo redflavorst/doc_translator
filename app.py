@@ -7,7 +7,15 @@ def open_file_dialog():
     from tkinter import filedialog
     root = tk.Tk()
     root.withdraw()
-    file_path = filedialog.askopenfilename()
+    file_path = filedialog.askopenfilename(
+        filetypes=[
+            ("All supported", "*.pdf *.doc *.docx *.txt *.html"),
+            ("PDF files", "*.pdf"),
+            ("Word files", "*.doc *.docx"),
+            ("Text files", "*.txt"),
+            ("HTML files", "*.html"),
+        ]
+    )
     root.destroy()
     return file_path
 
