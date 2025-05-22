@@ -9,12 +9,19 @@
 <div id="container">
   <button id="sidebar-toggle" onclick="toggleSidebar()">≡</button>
   <div id="sidebar">
-    <button onclick="window.pywebview.api.open_file_dialog()">파일선택</button>
+    <button onclick="triggerFileSelect()">파일선택</button>
     <button onclick="triggerFolderSelect()">폴더선택</button>
     <ul id="file-list"></ul>
   </div>
   <div id="main-panel">
-    <div id="left-panel">왼쪽 패널</div>
+    <div id="left-panel">
+      <div id="viewer-container"></div>
+      <div id="page-controls" class="hidden">
+        <button id="prev-page">◀</button>
+        <span id="page-info"></span>
+        <button id="next-page">▶</button>
+      </div>
+    </div>
     <div id="right-panel">오른쪽 패널</div>
   </div>
 </div>
