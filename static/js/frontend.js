@@ -11,6 +11,25 @@ function toggleSidebar() {
   }
 }
 
+function addFileToList(filePath) {
+  const fileList = document.getElementById('file-list');
+  const li = document.createElement('li');
+  const name = filePath.split(/[/\\]/).pop();
+  li.textContent = name;
+  if (name.toLowerCase().endsWith('.pdf')) {
+    li.onclick = () => loadPDFView(filePath);
+  }
+  fileList.appendChild(li);
+}
+
+function triggerFileSelect() {
+  window.pywebview.api.open_file_dialog().then(filePath => {
+    if (filePath) {
+      addFileToList(filePath);
+    }
+  });
+}
+
 async function selectFolder(folderPath) {
   const response = await fetch('/api/select-folder', {
     method: 'POST',
