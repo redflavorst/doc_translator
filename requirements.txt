@@ -1,0 +1,7 @@
+Flask
+pywebview
+pdfminer.six
+pdf2image
+langdetect
+requests
+Pillow
