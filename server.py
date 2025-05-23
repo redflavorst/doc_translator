@@ -48,9 +48,16 @@ def select_file():
     file_path = Path(path)
     
     try:
-        # PDF를 마크다운으로 변환
-        md_path = file_utils.convert_pdf_to_markdown(file_path)
-        print(f"마크다운 변환 완료: {md_path}")
+        # 이미 변환된 마크다운 파일이 있는지 확인
+        expected_md_path = file_path.parent / f"{file_path.stem}.md"
+        
+        if expected_md_path.exists():
+            print(f"이미 변환된 마크다운 파일 사용: {expected_md_path}")
+            md_path = str(expected_md_path)
+        else:
+            # PDF를 마크다운으로 변환
+            md_path = file_utils.convert_pdf_to_markdown(file_path)
+            print(f"마크다운 변환 완료: {md_path}")
         
         # 마크다운 파일에서 내용을 읽어와서 언어 감지
         with open(md_path, "r", encoding="utf-8") as f:

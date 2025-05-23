@@ -1,0 +1,155 @@
+## 契약書
+
+**3. 계약**
+
+**1. 항목**
+
+항목명: LED 도로조명 임대차용 계약
+
+**2. 항목수**
+
+**(1) 연속 임대**
+
+LED 도로조명 기구: 1,763개 (타입 A: 6,000개, 타입 B: 3,001개, 타입 C: 421개)
+타입 외 1: 2,507개, 타입 외 2: 2,700개
+
+**(2) 자동점등장치 (전자기식 세트)**
+
+1,763개
+
+**(3) 부착장치**
+
+500개
+
+**(4) 루버(차광판)**
+
+200개
+
+**3. 임대료 대여 기간**
+
+2023년 2월 1일부터 2028년 2월 28일까지
+
+**4. 계약금액**
+
+**⾦금액**: ¥100,000,000 원 (단, 최종 금액은 거래 관련 부가가치세 및 지방세를 포함한 금액)
+
+**5. 설치 장소**
+
+**⾀宮시** 내 지정 장소
+
+**6. 계약보증**
+
+제7조 제3항에 따라 면책됩니다.
+
+**갑**: ⾀宮시 본청 2번동 15번지, **⾀宮시청** 담당자: 중야마 히로카즈
+
+**을**:  
+
+**병**:
+**계약서 조항**
+
+1. Parties A, B, and C shall comply strictly with Japanese law and fulfill this agreement honestly.
+2. Parties B and C shall perform their duties diligently under A's supervision throughout the performance of this agreement (including negotiation documents and responses to inquiries).
+3. Parties B and C shall not disclose any confidential information obtained during the execution of this agreement, except after termination of the agreement.
+4. The terms regarding requests, notifications, reports, deliveries, filings, agreements, and cancellations specified in this agreement shall be strictly adhered to according to the documents provided herein.
+5. Language used between Parties A and C shall be Japanese.
+6. The currency used for payment specified in this agreement shall be Japanese Yen.
+7. Unless otherwise specified in the agreement documents, units of measurement used in this agreement shall comply with the standards established by Article 51 of the Commercial Law of Heisei 15 (1993).
+8. Terminations shall adhere to the provisions outlined in Articles 99 and Article 47 of the Meiji 25 year Law (1868) and the Commercial Law of Meiji 32 year (1869).
+9. This agreement shall be governed by Japanese law.
+10. Legal disputes arising from this agreement shall be adjudicated exclusively by courts designated by mutual agreement, including those concerning transfer of rights and obligations to third parties.
+
+**Risk Responsibility Clause**
+
+3. The contractual amount shall include damages incurred until completion of contract execution, save as otherwise agreed herein, including damages arising from delays due to natural disasters or unavoidable circumstances acknowledged by Party A. However, if Party A obtains consent for such damages, otherwise applicable.
+
+**Delivery of Equipment**
+
+4. Party B shall bear the responsibility for delivering equipment as specified in the agreement, placing it in a suitable operational state, adjusting it as needed, and making it available to Party A from the commencement date of the rental period.
+
+**Inspection Clause**
+
+5. Upon receipt of reports regarding equipment installation and completion from Party B, Party A shall promptly undertake inspection.
+6. Party B shall not object to any decisions made by Party A regarding inspections without reasonable grounds.
+7. If inspection results indicate deficiencies, Party B must promptly deliver and install any necessary corrective measures within the timeframe specified by Party A.
+
+**Late Performance Penalty Clause**
+
+6. If Party B delays rental of equipment due to reasons beyond their control (natural disasters, etc.), they shall compensate Party A with late fees as stipulated in Article X thereof, calculated at a rate of 14.6% annually for amounts exceeding ¥1,000 until rounded to the nearest yen.
+2. Fees exceeding ¥1,000 shall be charged to Party B in their entirety if there remain any amounts over ¥1,000 after rounding down.
+
+**Payment Clause**
+
+10. Party B shall pay rent monthly to Party A by the 1st following the rent period month.
+2. Party A shall settle any legal demands for rent due from Party B within 30 days of receipt of legally valid demand documents from Party B.
+3. If Party A delays payment stipulated in Article 10(2), they shall compensate Party B based on Article X(2) of the Law Concerning Measures to Prevent Rental Rent Payment Delays (Showa 27 Year Law No. 256), at a rate of 28% annually for delayed amounts exceeding ¥1,000 until rounded down.
+## 감독자 관련 조항
+
+1. 계약 체결일 다음 날로부터 감독자 선임 기간 시작 전까지 계약을 체결한 당사자는 계약 체결 시 감독자의 성명을 직접 통보해야 합니다. 감독자를 변경한 경우에도 마찬가지입니다.
+
+2. 당사자는 계약서에 명시된 기타 조항 및 계약에 근거한 당사자의 권한 중 필요하다고 인정하여 감독자에게 위임한 사항 외에도 계약서로 정해진 권한 외의 것에 대해서도 해당 권한을 행사할 수 있습니다.
+
+   - (1) 기계의 수납 및 설치와 관련한 지시사항은 현장 책임자에게 위임합니다. 승인사항은 협의합니다.
+   - (2) 기계의 수납 및 설치에 필요한 상세도 등 작성 및 제출사항은 당사자가 작성한 상세도 등 승인을 받습니다.
+   - (3) 계약서로 정한 절차의 관리, 점검, 설치 상황의 검사 등은 재료 시험 또는 검사(확인 포함)를 포함합니다.
+
+3. 당사자는 2명 이상의 감독자를 두고 이전 조항의 권한을 분담할 경우에는 각 감독자의 권한 내용을, 당사자가 특정 권한을 위임할 경우에는 해당 위임 내용을 통보해야 합니다.
+
+4. 제2항의 규정에 따른 감독자의 지시사항은 원칙적으로 서면으로 이행해야 합니다.(현장 책임자)
+
+9. 계약 체결 후 5일 이내에 현장 책임자를 지정하고, 계약 체결 후 5일 이내에 당사자의 지정에 따라 그 성명 및 필요한 사항을 통보해야 합니다. 이에 따른 변경도 마찬가지입니다.
+
+12. 계약 기간 중 발생한 기계 등의 결함으로 인해 제3자에게 손해가 발생한 경우에는 현장 책임자가 그 손해를 배상해야 합니다. 다만, 당사자의 고의나 과실로 인한 손해는 당사자가 책임을 집니다.
+
+---
+
+## 제3자에 대한 손해
+
+11. 제1항의 규정에 따른 기계 설치 중 제3자에게 손해가 발생한 경우에는 계약 당사자가 그 손해를 배상해야 합니다. 당사자의 책임 범위에 속하는 사항은 당사자가 배상해야 합니다.
+
+---
+
+## 기계 보수 및 유지
+
+13. 당사자는 계약 당사자가 정상적으로 이용 가능하도록 기계의 조정 및 보수 등을 책임집니다.
+
+   - (1) 기계가 고장 날 경우, 계약 당사자가 시정 요구를 하거나 시장 등에서 알림이 있을 경우 즉시 무상으로 보수하고 신속하게 정상 상태로 복구해야 합니다. 당사자의 고의 또는 중대한 과실이 아닌 경우에는 그렇지 않습니다.
+   - (2) 당사자가 위 조항의 규정에 따른 기계 보수를 소홀히 한 경우, 당사자가 이용 불가능할 때 발생한 손해액은 당사자가 부담해야 합니다.
+
+---
+
+## 계약 기간 종료 후 기계의 처리
+
+14. 계약 기간 종료 후의 기계는 무상으로 양도합니다.
+
+---
+
+## 설치 장소 변경 관련 조항
+
+15. 당사자는 계약서 상의 기계 설치 장소 또는 상세도 등을 변경할 필요가 있을 경우 신속하게 통보해야 합니다. 변경에 따른 비용은 당사자와 협의 후 결정합니다.
+
+2. 계약서 상의 기계 설치 시 다음 사항이 발생할 경우 즉시 당사자에게 통보하고 확인을 청구해야 합니다.
+   - (1) 계약서로 오류가 있음
+   - (2) 계약서 내용이 명확하지 않음
+   - (3) 계약 조건과 실제 현장 간 불일치
+   - (4) 계약서로 명시되지 않은 특이한 상황 발생
+3. 제2항의 사항이 확인되면 계약서로 수정사항을 변경해야 합니다. 수정사항에 따른 설치 기간 변경은 당사자의 동의가 필요합니다.
+
+---
+
+## 기계 추가 및 개조 관련 조항
+
+16. 당사자는 계약서로 명시되지 않은 추가 부속품 또는 개조 작업이 필요할 경우 사전에 서면으로 승인을 받아야 합니다. 이에 따른 비용은 당사자가 부담합니다.
+
+---
+
+## 기계 반환 관련 조항
+
+17. 계약이 종료된 후 또는 계약 해제 시에는 당사자가 현장 책임자 및 제3자에게 즉시 통지해야 합니다. 현장 책임자는 즉시 기계 회수해야 하며, 회수 비용은 당사자가 부담합니다.
+
+---
+
+## 사고 발생 시 보고 관련 조항
+
+18. 현장 책임자는 계약 수행 중 사고, 고장 등으로 계약 준수가 어려운 경우 즉시 당사자에게 보고하고 지시에 따라야 합니다.
+[ERROR] Ollama API 요청 처리 오류: HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=120)

@@ -12,21 +12,25 @@ with open(PROMPT_FILE, 'r', encoding='utf-8') as f:
     PROMPTS = yaml.safe_load(f)
 
 # 마크다운 분할 관련 상수
-MAX_CHUNK_SIZE = 4000  # 최대 청크 크기 (문자 수)
+MAX_CHUNK_SIZE = 3000  # 최대 청크 크기 (문자 수) - 타임아웃 방지를 위해 크기 감소
 HEADER_PATTERN = re.compile(r'^(#{1,6}\s+.+)$', re.MULTILINE)  # 마크다운 헤더 패턴
 
+# API 관련 상수
+API_TIMEOUT = 180  # API 요청 타임아웃 (초)
+MAX_RETRIES = 2  # 최대 재시도 횟수
 
-def format_paragraph_prompt(text: str) -> str:
+
+def format_translation_prompt(text: str) -> str:
     """
     프롬프트 템플릿에 입력 텍스트를 삽입합니다.
     description과 template을 모두 포함합니다.
     """
-    description = PROMPTS['paragraph_translation']['description']
-    template = PROMPTS['paragraph_translation']['template']
+    description = PROMPTS['unified_translation']['description']
+    template = PROMPTS['unified_translation']['template']
     
     # description과 template을 합쳐서 전체 프롬프트 생성
     full_prompt = description + "\n\n" + template
-    return full_prompt.replace('{{source_paragraph}}', text)
+    return full_prompt.replace('{{source_text}}', text)
 
 
 def split_markdown_by_headers(markdown_text: str) -> List[str]:
@@ -35,7 +39,7 @@ def split_markdown_by_headers(markdown_text: str) -> List[str]:
     너무 큰 청크는 추가로 분할하고, 너무 작은 청크는 합칩니다.
     """
     # 최소 청크 크기 (이 크기보다 작은 섹션은 다음 섹션과 합칩니다)
-    MIN_CHUNK_SIZE = 500
+    MIN_CHUNK_SIZE = 1000
     
     # 헤더 위치 찾기
     header_matches = list(HEADER_PATTERN.finditer(markdown_text))
@@ -218,10 +222,14 @@ def translate_chunk(text: str) -> str:
     """
     단일 청크를 번역합니다.
     """
-    prompt = format_paragraph_prompt(text)
+    prompt = format_translation_prompt(text)
     data = {
         'model': 'exaone3.5:2.4b',
         'prompt': prompt,
+        'temperature': 0.1,  # 낮은 온도로 더 결정적인 응답 생성
+        'top_p': 0.7,        # 샘플링 확률 임계값 낮춤
+        'top_k': 10,         # 샘플링할 토큰 수 제한
+        'num_predict': -1    # 전체 응답 생성 (제한 없음)
     }
     try:
         # Ollama API가 실행 중인지 확인
@@ -242,27 +250,39 @@ def translate_chunk(text: str) -> str:
         # 스트리밍 응답 처리를 위한 함수
         def process_streaming_response(url, json_data):
             full_response = ""
-            try:
-                # stream=True로 설정하여 스트리밍 응답 처리
-                with requests.post(url, json=json_data, stream=True, timeout=120) as r:
-                    r.raise_for_status()
-                    for line in r.iter_lines():
-                        if not line:  # 빈 줄 건너뛰기
-                            continue
-                        try:
-                            # 각 줄을 JSON으로 파싱
-                            line_json = json.loads(line)
-                            if 'response' in line_json:
-                                chunk = line_json['response']
-                                full_response += chunk
-                            if line_json.get('done', False):
-                                break
-                        except json.JSONDecodeError:
-                            print(f"JSON 파싱 오류 발생: {line}")
-                return full_response
-            except Exception as e:
-                print(f"Ollama API 스트리밍 응답 처리 오류: {str(e)}")
-                raise e
+            retries = 0
+            
+            while retries <= MAX_RETRIES:
+                try:
+                    # stream=True로 설정하여 스트리밍 응답 처리
+                    with requests.post(url, json=json_data, stream=True, timeout=API_TIMEOUT) as r:
+                        r.raise_for_status()
+                        for line in r.iter_lines():
+                            if not line:  # 빈 줄 건너뛰기
+                                continue
+                            try:
+                                # 각 줄을 JSON으로 파싱
+                                line_json = json.loads(line)
+                                if 'response' in line_json:
+                                    chunk = line_json['response']
+                                    full_response += chunk
+                                if line_json.get('done', False):
+                                    break
+                            except json.JSONDecodeError:
+                                print(f"JSON 파싱 오류 발생: {line}")
+                    # 성공적으로 응답을 받았으면 반환
+                    return full_response
+                    
+                except requests.exceptions.Timeout:
+                    retries += 1
+                    if retries <= MAX_RETRIES:
+                        print(f"Ollama API 타임아웃 발생. {retries}/{MAX_RETRIES} 재시도 중... (타임아웃: {API_TIMEOUT}초)")
+                    else:
+                        print(f"Ollama API 최대 재시도 횟수 초과 ({MAX_RETRIES}회)")
+                        raise
+                except Exception as e:
+                    print(f"Ollama API 스트리밍 응답 처리 오류: {str(e)}")
+                    raise e
         
         try:
             # 스트리밍 응답 처리
@@ -277,15 +297,15 @@ def translate_chunk(text: str) -> str:
         print(f"번역 완료: {len(response)} 글자")
         return response
     except requests.exceptions.Timeout:
-        error_msg = "Ollama API 요청 시간 초과 (120초)"
+        error_msg = f"Ollama API 요청 시간 초과 ({API_TIMEOUT}초). 청크 크기: {len(text)} 글자"
         print(error_msg)
         return f"[ERROR] {error_msg}"
     except requests.exceptions.RequestException as e:
-        error_msg = f"Ollama API 요청 오류: {str(e)}"
+        error_msg = f"Ollama API 요청 오류: {str(e)}. 청크 크기: {len(text)} 글자"
         print(error_msg)
         return f"[ERROR] {error_msg}"
     except Exception as e:
-        error_msg = f"번역 중 오류 발생: {str(e)}"
+        error_msg = f"번역 중 오류 발생: {str(e)}. 청크 크기: {len(text)} 글자"
         print(error_msg)
         return f"[ERROR] {error_msg}"
 
