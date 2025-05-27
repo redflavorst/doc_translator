@@ -1,3 +1,52 @@
+/* 아이콘 스타일 - 유니코드 심볼 사용 */
+.icon {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  text-align: center;
+  vertical-align: middle;
+  line-height: 20px;
+}
+
+.icon-folder::before {
+  content: "📁";
+  font-size: 18px;
+}
+
+.icon-file::before {
+  content: "📄";
+  font-size: 18px;
+}
+
+.icon-chevron-left::before {
+  content: "◀";
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.icon-chevron-right::before {
+  content: "▶";
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.icon-minimize::before {
+  content: "−";
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.icon-maximize::before {
+  content: "□";
+  font-size: 14px;
+}
+
+.icon-close::before {
+  content: "×";
+  font-size: 18px;
+  font-weight: bold;
+}
+
 /* 파일 목록 스타일 */
 #file-list {
   list-style: none;
@@ -11,20 +60,143 @@
   padding: 8px 12px;
   border-bottom: 1px solid #e5e7eb;
   transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  border-radius: 4px;
+  margin-bottom: 2px;
 }
 
 #file-list li:hover {
   background-color: #f3f4f6;
 }
 
-/* 외국어 문서 스타일 */
+/* 외국어 문서 스타일 - 더 눈에 띄는 디자인 */
 #file-list li.foreign-doc {
   background-color: #eff6ff;
-  border-left: 3px solid #3b82f6;
+  border-left: 4px solid #3b82f6;
+  position: relative;
 }
 
 #file-list li.foreign-doc:hover {
   background-color: #dbeafe;
+}
+
+/* 외국어 문서 표시기 */
+#file-list li.foreign-doc::after {
+  content: '🌍';
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  opacity: 0.6;
+}
+
+/* 이모지 폰트 스타일 개선 */
+.emoji-font {
+  font-family: 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', 'Twemoji Mozilla', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "liga" 1, "kern" 1;
+  line-height: 1.4;
+  letter-spacing: 0.025em;
+}
+
+/* 파일명에서 국기 이모지 크기 조정 */
+#file-list .emoji-font {
+  line-height: 1.4;
+  letter-spacing: 0.025em;
+}
+
+/* 사이드바 리사이저 스타일 */
+.sidebar-resizer {
+  width: 4px;
+  background: #e5e7eb;
+  cursor: ew-resize;
+  position: relative;
+  transition: background-color 0.2s;
+  flex-shrink: 0;
+}
+
+.sidebar-resizer:hover {
+  background: #3b82f6;
+}
+
+/* 리사이저 그립 표시 */
+.sidebar-resizer::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 12px;
+  height: 40px;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 1px,
+    #9ca3af 1px,
+    #9ca3af 2px
+  );
+  border-radius: 2px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.sidebar-resizer:hover::after {
+  opacity: 1;
+}
+
+/* 리사이징 중 상태 */
+.resizing {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+.resizing * {
+  cursor: ew-resize !important;
+}
+
+/* 사이드바 스타일 */
+#sidebar {
+  min-width: 200px;
+  max-width: 600px;
+  transition: width 0.3s ease-in-out;
+  overflow: hidden;
+  position: relative;
+}
+
+#sidebar.hidden {
+  width: 0 !important;
+  min-width: 0;
+}
+
+/* 사이드바 토글 버튼 */
+#sidebarToggle {
+  position: absolute;
+  right: -12px;
+  top: 10px;
+  background: white;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  z-index: 10;
+  transition: right 0.3s ease;
+  border: 1px solid #e5e7eb;
+  cursor: pointer;
+}
+
+#sidebarToggle:hover {
+  background: #f3f4f6;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
 }
 
 /* 폴더 상태 메시지 */
@@ -38,12 +210,23 @@
   border-radius: 0.375rem;
 }
 
+.folder-status.foreign-info {
+  background-color: #eff6ff;
+  border-left-color: #3b82f6;
+  color: #1e40af;
+}
+
 /* 로딩 상태 */
 .loading {
   padding: 20px;
   text-align: center;
   color: #4b5563;
   font-style: italic;
+}
+
+/* 언어 툴팁 스타일 개선 */
+#file-list li span[title] {
+  cursor: help;
 }
 
 /* 기본 레이아웃 */
@@ -53,47 +236,11 @@
   position: relative;
 }
 
-#sidebar-toggle {
-  position: fixed;
-  left: 250px;
-  top: 10px;
-  z-index: 1000;
-  background: #fff;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  padding: 5px 10px;
-  cursor: pointer;
-  transition: left 0.3s;
-}
-
-#sidebar {
-  width: 250px;
-  transition: transform 0.3s ease-in-out;
-  overflow: auto;
-  border-right: 1px solid #ccc;
-  background: #f5f5f5;
-  height: 100%;
-  position: relative;
-  z-index: 100;
-  flex-shrink: 0;
-}
-
-#sidebar.hidden {
-  transform: translateX(-100%);
-}
-
 #main-panel {
   flex: 1;
   display: flex;
-  transition: margin-left 0.3s;
   height: 100%;
   overflow: hidden;
-  margin-left: 0;
-}
-
-/* 사이드바가 열려있을 때 메인 패널에 여백 추가 */
-#sidebar:not(.hidden) + #main-panel {
-  margin-left: 250px;
 }
 
 #left-panel, #right-panel {
@@ -112,32 +259,240 @@
   background: #f5f5f5;
 }
 
-/* file list */
-#file-list li {
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  padding: 2px 4px;
-}
-
-#file-list li:hover {
-  background: #eaeaea;
-}
-
+/* 파일 목록 개선 */
 #file-list .file-name {
-  margin-left: 5px;
+  margin-left: 8px;
   flex: 1;
+  font-size: 14px;
 }
 
-#page-controls {
+/* PDF 페이지 컨트롤 */
+#page-controls button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.hidden {
+  display: none;
+}
+
+/* 체크박스 스타일 개선 */
+#file-list input[type="checkbox"] {
+  margin-right: 8px;
+  cursor: pointer;
+}
+
+/* 파일명 클릭 스타일 */
+#file-list .file-name {
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+#file-list .file-name:hover {
+  color: #3b82f6;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+  #file-list li.foreign-doc::after {
+    font-size: 10px;
+    right: 4px;
+  }
+  
+  .folder-status {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
+  
+  #file-list li {
+    padding: 6px 8px;
+  }
+  
+  .sidebar-resizer {
+    width: 6px; /* 모바일에서 더 넓게 */
+  }
+  
+  #sidebar {
+    min-width: 150px;
+    max-width: 400px;
+  }
+  
+  .icon-folder::before,
+  .icon-file::before {
+    font-size: 16px;
+  }
+}
+
+/* 접근성 개선 */
+@media (prefers-reduced-motion: reduce) {
+  #file-list li,
+  #sidebar,
+  .sidebar-resizer,
+  #sidebarToggle {
+    transition: none;
+  }
+}
+
+/* 다크 모드 지원 */
+@media (prefers-color-scheme: dark) {
+  #file-list li.foreign-doc {
+    background-color: #1e3a8a;
+    border-left-color: #60a5fa;
+  }
+  
+  #file-list li.foreign-doc:hover {
+    background-color: #1e40af;
+  }
+  
+  .folder-status {
+    background-color: #064e3b;
+    border-left-color: #34d399;
+    color: #a7f3d0;
+  }
+  
+  .sidebar-resizer {
+    background: #374151;
+  }
+  
+  .sidebar-resizer:hover {
+    background: #60a5fa;
+  }
+  
+  #sidebarToggle {
+    background: #1f2937;
+    border-color: #374151;
+    color: #d1d5db;
+  }
+  
+  #sidebarToggle:hover {
+    background: #374151;
+  }
+  
+  #page-controls button {
+    background: #1f2937;
+    border-color: #374151;
+    color: #d1d5db;
+  }
+  
+  #page-controls button:hover {
+    background: #374151;
+    border-color: #60a5fa;
+  }
+}
+
+/* 고해상도 디스플레이 지원 */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .icon-folder::before,
+  .icon-file::before {
+    font-size: 16px; /* 고해상도에서 약간 작게 */
+  }
+  
+  .icon-chevron-left::before,
+  .icon-chevron-right::before {
+    font-size: 12px;
+  }
+}
+
+/* 스크롤바 스타일 개선 */
+#file-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+#file-list::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+#file-list::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+#file-list::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* 선택 효과 개선 */
+#file-list li:active {
+  transform: scale(0.98);
+}
+
+/* 로딩 애니메이션 */
+.loading {
+  position: relative;
+}
+
+.loading::after {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  margin: auto;
+  border: 2px solid transparent;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 포커스 상태 개선 */
+button:focus,
+input:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* 사이드바 그림자 효과 */
+#sidebar {
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+}
+
+/* 리사이저 활성 상태 */
+.sidebar-resizer:active {
+  background: #1d4ed8;
+}
+
+/* 툴팁 스타일 개선 */
+[title]:hover::after {
+  content: attr(title);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 1000;
+  pointer-events: none;
+}controls {
   text-align: center;
   margin-top: 10px;
 }
 
 #page-controls button {
   margin: 0 5px;
+  padding: 8px;
+  border-radius: 50%;
+  border: 1px solid #e5e7eb;
+  background: white;
+  transition: all 0.2s;
+  cursor: pointer;
 }
 
-.hidden {
-  display: none;
+#page-controls button:hover {
+  background: #f3f4f6;
+  border-color: #3b82f6;
 }
+
+#page-

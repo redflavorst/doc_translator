@@ -493,12 +493,20 @@ def convert_pdf_to_markdown(pdf_path: Path, output_dir: Path = None, use_ocr: bo
         # 5. PDF 파이프라인 옵션 설정
         from docling.document_converter import DocumentConverter, PdfFormatOption
         from docling.datamodel.base_models import InputFormat
-        from docling.datamodel.pipeline_options import PdfPipelineOptions
+        from docling.datamodel.pipeline_options import PdfPipelineOptions, TesseractCliOcrOptions
         
         pipeline_options = PdfPipelineOptions()
-        pipeline_options.do_ocr = use_ocr
+        
+        # OCR 설정 수정 (기존 에러 부분)
+        if use_ocr:
+            ocr_options = TesseractCliOcrOptions(lang=["auto"])
+            pipeline_options.do_ocr = True
+            pipeline_options.force_full_page_ocr = True
+            pipeline_options.ocr_options = ocr_options
+        else:
+            pipeline_options.do_ocr = False
+            
         pipeline_options.do_table_structure = True  # 표 구조 인식 활성화
-        pipeline_options.ocr_language = 'kor+eng'  # 한국어와 영어 인식
         
         pdf_options = PdfFormatOption(pipeline_options=pipeline_options)
         

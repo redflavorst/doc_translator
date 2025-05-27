@@ -16,9 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
-  
-  <!-- 아이콘 -->
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
@@ -58,6 +56,75 @@
       z-index: 10;
     }
     
+    /* 로컬 아이콘 스타일 추가 */
+    .local-icon {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      text-align: center;
+      vertical-align: middle;
+      line-height: 20px;
+    }
+    
+    .local-icon.folder::before {
+      content: "📁";
+      font-size: 18px;
+    }
+    
+    .local-icon.file::before {
+      content: "📄";
+      font-size: 18px;
+    }
+    
+    .local-icon.chevron-left::before {
+      content: "◀";
+      font-size: 14px;
+    }
+    
+    .local-icon.chevron-right::before {
+      content: "▶";
+      font-size: 14px;
+    }
+    
+    .local-icon.minimize::before {
+      content: "−";
+      font-size: 16px;
+      font-weight: bold;
+    }
+    
+    .local-icon.maximize::before {
+      content: "□";
+      font-size: 14px;
+    }
+    
+    .local-icon.close::before {
+      content: "×";
+      font-size: 18px;
+      font-weight: bold;
+    }
+    
+    /* 사이드바 리사이저 스타일 추가 */
+    .sidebar-resizer {
+      width: 4px;
+      background: #e5e7eb;
+      cursor: ew-resize;
+      position: relative;
+      transition: background-color 0.2s;
+      flex-shrink: 0;
+    }
+    
+    .sidebar-resizer:hover {
+      background: #3b82f6;
+    }
+    
+    .resizing {
+      user-select: none;
+    }
+    
+    .resizing * {
+      cursor: ew-resize !important;
+    }
+    
     /* 이모지 폰트 스타일 */
     .emoji-font {
       font-family: 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;
@@ -71,10 +138,10 @@
   <header class="bg-blue-700 text-white flex items-center justify-between px-4 py-2 shadow-md">
     <div class="flex items-center space-x-4">
       <button class="p-2 rounded-md hover:bg-blue-600 transition-colors" id="folderButton" onclick="triggerFolderSelect()">
-        <span class="material-icons">folder_open</span>
+        <span class="local-icon folder"></span>
       </button>
       <button class="p-2 rounded-md hover:bg-blue-600 transition-colors" id="fileButton" onclick="triggerFileSelect()">
-        <span class="material-icons">insert_drive_file</span>
+        <span class="local-icon file"></span>
       </button>
     </div>
     <div class="flex items-center space-x-3">
@@ -82,9 +149,9 @@
         번역하기
       </button>
       <div class="flex items-center space-x-1 text-neutral-300">
-        <button class="p-1 hover:bg-blue-600 rounded-sm transition-colors"><span class="material-icons text-lg">minimize</span></button>
-        <button class="p-1 hover:bg-blue-600 rounded-sm transition-colors"><span class="material-icons text-lg">crop_square</span></button>
-        <button class="p-1 hover:bg-blue-600 rounded-sm transition-colors"><span class="material-icons text-lg">close</span></button>
+        <button class="p-1 hover:bg-blue-600 rounded-sm transition-colors"><span class="local-icon minimize"></span></button>
+        <button class="p-1 hover:bg-blue-600 rounded-sm transition-colors"><span class="local-icon maximize"></span></button>
+        <button class="p-1 hover:bg-blue-600 rounded-sm transition-colors"><span class="local-icon close"></span></button>
       </div>
     </div>
   </header>
@@ -92,11 +159,11 @@
   <div class="flex flex-1 overflow-hidden relative">
     <!-- 사이드바 토글 버튼 -->
     <button class="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-6 h-12 bg-white border border-neutral-300 rounded-r-md flex items-center justify-center shadow-md hover:bg-neutral-100 transition-colors" id="sidebarToggle">
-      <span class="material-icons text-neutral-600">chevron_right</span>
+      <span class="local-icon chevron-right"></span>
     </button>
     
     <!-- 사이드바 -->
-    <aside class="w-64 bg-neutral-50 border-r border-neutral-300 transition-all duration-300 ease-in-out overflow-y-auto" id="sidebar">
+    <aside class="bg-neutral-50 border-r border-neutral-300 overflow-y-auto" id="sidebar" style="width: 256px; min-width: 200px; max-width: 600px;">
       <div class="p-4">
         <div class="flex justify-between items-center mb-4">
           <h2 class="text-lg font-semibold text-neutral-700">문서 목록</h2>
@@ -107,6 +174,9 @@
       </div>
     </aside>
 
+    <!-- 사이드바 리사이저 -->
+    <div class="sidebar-resizer" id="sidebarResizer"></div>
+
     <div id="main-panel" class="flex-1 bg-white">
       <div id="left-panel">
         <div id="viewer-container" class="h-full">
@@ -116,11 +186,11 @@
         </div>
         <div id="page-controls" class="hidden flex items-center justify-center space-x-4 p-2 border-t border-neutral-200">
           <button id="prev-page" class="p-2 hover:bg-neutral-100 rounded-full">
-            <span class="material-icons">chevron_left</span>
+            <span class="local-icon chevron-left"></span>
           </button>
           <span id="page-info" class="text-sm text-neutral-600"></span>
           <button id="next-page" class="p-2 hover:bg-neutral-100 rounded-full">
-            <span class="material-icons">chevron_right</span>
+            <span class="local-icon chevron-right"></span>
           </button>
         </div>
       </div>
@@ -137,34 +207,89 @@
   <script>
     const sidebar = document.getElementById('sidebar');
     const sidebarToggle = document.getElementById('sidebarToggle');
+    const sidebarResizer = document.getElementById('sidebarResizer');
     
+    let isResizing = false;
+    let startX = 0;
+    let startWidth = 0;
+    
+    // 기존 토글 함수 개선
     function toggleSidebar() {
-      const isCollapsed = sidebar.classList.toggle('w-0');
-      sidebar.classList.toggle('w-64');
+      const currentWidth = sidebar.style.width;
+      const isHidden = currentWidth === '0px';
+      const icon = sidebarToggle.querySelector('.local-icon');
       
-      const icon = sidebarToggle.querySelector('.material-icons');
-      if (isCollapsed) {
-        sidebar.style.visibility = 'hidden';
-        icon.textContent = 'chevron_right';
-        sidebarToggle.style.left = '0';
-      } else {
+      if (isHidden) {
+        sidebar.style.width = '256px';
         sidebar.style.visibility = 'visible';
-        icon.textContent = 'chevron_left';
-        sidebarToggle.style.left = '256px'; // 사이드바 너비만큼 이동
+        icon.className = 'local-icon chevron-left';
+        sidebarToggle.style.left = '256px';
+      } else {
+        sidebar.style.width = '0px';
+        sidebar.style.visibility = 'hidden';
+        icon.className = 'local-icon chevron-right';
+        sidebarToggle.style.left = '0px';
       }
     }
 
-    // 사이드바 토글 버튼 이벤트 리스너
+    // 리사이저 기능 최적화
+    function startResize(e) {
+      isResizing = true;
+      startX = e.clientX;
+      startWidth = parseInt(sidebar.style.width || '256', 10);
+      document.body.classList.add('resizing');
+      
+      // 리사이징 중 transition 비활성화
+      sidebar.style.transition = 'none';
+      
+      document.addEventListener('mousemove', doResize);
+      document.addEventListener('mouseup', stopResize);
+      e.preventDefault();
+    }
+    
+    function doResize(e) {
+      if (!isResizing) return;
+      
+      const deltaX = e.clientX - startX;
+      const newWidth = startWidth + deltaX;
+      
+      const minWidth = 200;
+      const maxWidth = 600;
+      
+      if (newWidth >= minWidth && newWidth <= maxWidth) {
+        sidebar.style.width = newWidth + 'px';
+        // 토글 버튼 위치 업데이트
+        sidebarToggle.style.left = newWidth + 'px';
+      }
+    }
+    
+    function stopResize() {
+      isResizing = false;
+      document.body.classList.remove('resizing');
+      
+      // transition 다시 활성화 (토글용)
+      sidebar.style.transition = 'width 0.3s ease-in-out, visibility 0.3s ease-in-out';
+      
+      document.removeEventListener('mousemove', doResize);
+      document.removeEventListener('mouseup', stopResize);
+    }
+
+    // 이벤트 리스너
     if (sidebarToggle) {
       sidebarToggle.addEventListener('click', toggleSidebar);
     }
     
+    if (sidebarResizer) {
+      sidebarResizer.addEventListener('mousedown', startResize);
+    }
+    
     // 초기 상태 설정
     document.addEventListener('DOMContentLoaded', function() {
-      // 사이드바가 기본으로 열려있도록 설정
+      sidebar.style.width = '256px';
       sidebar.style.visibility = 'visible';
+      sidebar.style.transition = 'width 0.3s ease-in-out, visibility 0.3s ease-in-out';
       sidebarToggle.style.left = '256px';
-      sidebarToggle.querySelector('.material-icons').textContent = 'chevron_left';
+      sidebarToggle.querySelector('.local-icon').className = 'local-icon chevron-left';
     });
   </script>
 </body>
