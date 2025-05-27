@@ -3,7 +3,74 @@ let currentFile = null;
 let currentPage = 1;
 let totalPages = 1;
 
-// 폴더 선택 함수 - 상세한 디버깅 포함
+// 언어 코드를 국기 이모지로 변환하는 함수
+function getLanguageFlag(languageCode) {
+  const flagMap = {
+    // 주요 언어들
+    'en': '🇺🇸', // English - 미국 국기
+    'ja': '🇯🇵', // Japanese - 일본 국기
+    'zh': '🇨🇳', // Chinese - 중국 국기
+    'zh-cn': '🇨🇳', // Chinese Simplified - 중국 국기
+    'zh-tw': '🇹🇼', // Chinese Traditional - 대만 국기
+    'es': '🇪🇸', // Spanish - 스페인 국기
+    'fr': '🇫🇷', // French - 프랑스 국기
+    'de': '🇩🇪', // German - 독일 국기
+    'ru': '🇷🇺', // Russian - 러시아 국기
+    'ar': '🇸🇦', // Arabic - 사우디아라비아 국기
+    'pt': '🇵🇹', // Portuguese - 포르투갈 국기
+    'it': '🇮🇹', // Italian - 이탈리아 국기
+    'vi': '🇻🇳', // Vietnamese - 베트남 국기
+    'th': '🇹🇭', // Thai - 태국 국기
+    'id': '🇮🇩', // Indonesian - 인도네시아 국기
+    'hi': '🇮🇳', // Hindi - 인도 국기
+    'nl': '🇳🇱', // Dutch - 네덜란드 국기
+    'pl': '🇵🇱', // Polish - 폴란드 국기
+    'tr': '🇹🇷', // Turkish - 터키 국기
+    'sv': '🇸🇪', // Swedish - 스웨덴 국기
+    'da': '🇩🇰', // Danish - 덴마크 국기
+    'no': '🇳🇴', // Norwegian - 노르웨이 국기
+    'fi': '🇫🇮', // Finnish - 핀란드 국기
+    'ms': '🇲🇾', // Malay - 말레이시아 국기
+    'tl': '🇵🇭', // Filipino - 필리핀 국기
+    'fil': '🇵🇭', // Filipino - 필리핀 국기
+    
+    // 기타 알 수 없는 언어
+    'unknown': '🏳️', // 흰색 깃발
+    'undefined': '🏳️'
+  };
+  
+  // 언어 코드가 없거나 한국어인 경우 빈 문자열 반환
+  if (!languageCode || languageCode === 'ko') {
+    return '';
+  }
+  
+  // 언어 코드를 소문자로 변환하고 매핑에서 찾기
+  const normalizedCode = languageCode.toLowerCase();
+  return flagMap[normalizedCode] || '🌐'; // 매핑에 없는 경우 지구본 이모지 사용
+}
+
+// 언어 신뢰도에 따라 국기 이모지 표시 여부 결정
+function shouldShowFlag(confidence, isLanguageDetected = true) {
+  // 언어가 감지되지 않았거나 신뢰도가 50% 미만인 경우 국기를 표시하지 않음
+  return isLanguageDetected && confidence >= 50;
+}
+
+// 파일명에 국기 이모지 추가하는 함수
+function addFlagToFileName(fileName, languageCode, confidence) {
+  if (!shouldShowFlag(confidence, !!languageCode)) {
+    return fileName;
+  }
+  
+  const flag = getLanguageFlag(languageCode);
+  if (!flag) {
+    return fileName;
+  }
+  
+  // 파일명 앞에 국기 이모지 추가
+  return `${flag} ${fileName}`;
+}
+
+// 폴더 선택 함수 - 상세한 디버깅 포함 + 국기 이모지 추가
 async function selectFolder(folderPath) {
   console.log('\n=== 폴더 선택 함수 시작 ===');
   console.log('폴더 경로:', folderPath);
@@ -60,14 +127,30 @@ async function selectFolder(folderPath) {
           const li = document.createElement('li');
           li.className = 'flex items-center py-2 px-3 hover:bg-gray-100 rounded cursor-pointer';
           
+          // 외국어 문서인 경우 특별한 스타일 추가
+          if (file.is_foreign) {
+            li.classList.add('foreign-doc');
+          }
+          
           const checkbox = document.createElement('input');
           checkbox.type = 'checkbox';
           checkbox.value = file.path || file;
           checkbox.className = 'mr-3';
           
           const fileName = document.createElement('span');
-          fileName.textContent = file.name || (typeof file === 'string' ? file : '알 수 없는 파일');
-          fileName.className = 'flex-1';
+          // 국기 이모지가 포함된 파일명 사용
+          const displayName = addFlagToFileName(
+            file.name || (typeof file === 'string' ? file : '알 수 없는 파일'),
+            file.language,
+            file.confidence || 0
+          );
+          fileName.textContent = displayName;
+          fileName.className = 'flex-1 emoji-font'; // 이모지 폰트 클래스 추가
+          
+          // 언어 정보 툴팁 추가
+          if (file.language && file.language !== 'ko') {
+            fileName.title = `언어: ${file.language_name || file.language} (신뢰도: ${file.confidence || 0}%)`;
+          }
           
           li.appendChild(checkbox);
           li.appendChild(fileName);
@@ -82,6 +165,15 @@ async function selectFolder(folderPath) {
         });
         
         console.log('파일 목록 UI 생성 완료');
+        
+        // 폴더 정보 표시
+        if (data.message) {
+          const statusDiv = document.createElement('div');
+          statusDiv.className = 'folder-status mt-2 p-2 bg-blue-50 border-l-4 border-blue-400 text-blue-800 text-sm';
+          statusDiv.textContent = data.message;
+          fileList.parentElement.insertBefore(statusDiv, fileList);
+        }
+        
       } else {
         console.log('파일이 없거나 잘못된 응답 형식');
         console.log('data.files:', data.files);

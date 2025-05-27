@@ -222,62 +222,53 @@ def translate_chunk(text: str) -> str:
     data = {
         'model': 'exaone3.5:2.4b',
         'prompt': prompt,
+        'stream': False,  # 스트리밍 비활성화
+        'options': {
+            'temperature': 0.1,
+            'num_predict': 8000,  # 충분한 응답 길이
+        }
     }
+    
     try:
-        # Ollama API가 실행 중인지 확인
-        try:
-            check_res = requests.get('http://localhost:11434/api/version', timeout=5)
-            if check_res.status_code != 200:
-                print(f"Ollama API 서버가 응답하지만 상태 코드가 잘못되었습니다: {check_res.status_code}")
-                return f"[ERROR] Ollama API 서버가 응답하지만 상태 코드가 잘못되었습니다: {check_res.status_code}"
-        except requests.exceptions.ConnectionError:
-            print("Ollama API 서버에 연결할 수 없습니다. 서버가 실행 중인지 확인하세요.")
-            return "[ERROR] Ollama API 서버에 연결할 수 없습니다. 서버가 실행 중인지 확인하세요."
-        except Exception as e:
-            print(f"Ollama API 서버 확인 중 오류 발생: {str(e)}")
-        
-        # 번역 요청 - 스트리밍 응답 처리
         print(f"Ollama API로 번역 요청 전송 중... ({len(prompt)} 글자)")
         
-        # 스트리밍 응답 처리를 위한 함수
-        def process_streaming_response(url, json_data):
-            full_response = ""
-            try:
-                # stream=True로 설정하여 스트리밍 응답 처리
-                with requests.post(url, json=json_data, stream=True, timeout=120) as r:
-                    r.raise_for_status()
-                    for line in r.iter_lines():
-                        if not line:  # 빈 줄 건너뛰기
-                            continue
-                        try:
-                            # 각 줄을 JSON으로 파싱
-                            line_json = json.loads(line)
-                            if 'response' in line_json:
-                                chunk = line_json['response']
-                                full_response += chunk
-                            if line_json.get('done', False):
-                                break
-                        except json.JSONDecodeError:
-                            print(f"JSON 파싱 오류 발생: {line}")
-                return full_response
-            except Exception as e:
-                print(f"Ollama API 스트리밍 응답 처리 오류: {str(e)}")
-                raise e
+        # 단순한 POST 요청
+        response = requests.post(
+            'http://localhost:11434/api/generate',
+            json=data,
+            timeout=300  # 5분으로 늘림
+        )
+        
+        response.raise_for_status()
+        
+        # 응답 내용 디버깅
+        response_text = response.text
+        print(f"[DEBUG] 원본 응답: {response_text[:500]}...")
         
         try:
-            # 스트리밍 응답 처리
-            response = process_streaming_response('http://localhost:11434/api/generate', data)
-        except Exception as e:
-            return f"[ERROR] Ollama API 요청 처리 오류: {str(e)}"
+            result = response.json()
+            print(f"[DEBUG] JSON 파싱 성공. 키들: {list(result.keys())}")
+            
+            # 'response' 키 확인
+            if 'response' in result:
+                translated = result['response'].strip()
+                if translated:
+                    print(f"번역 완료: {len(translated)} 글자")
+                    return translated
+                else:
+                    print("[ERROR] 빈 응답 받음")
+                    return "[ERROR] 빈 번역 결과"
+            else:
+                print(f"[ERROR] 'response' 키 없음. 사용 가능한 키: {list(result.keys())}")
+                return f"[ERROR] API 응답에 'response' 키 없음"
+                
+        except json.JSONDecodeError as e:
+            print(f"[ERROR] JSON 파싱 실패: {e}")
+            print(f"[ERROR] 응답 내용: {response_text}")
+            return f"[ERROR] JSON 파싱 실패"
         
-        if not response:
-            print("Ollama API가 빈 번역 결과를 반환했습니다.")
-            return "[ERROR] Ollama API가 빈 번역 결과를 반환했습니다."
-        
-        print(f"번역 완료: {len(response)} 글자")
-        return response
     except requests.exceptions.Timeout:
-        error_msg = "Ollama API 요청 시간 초과 (120초)"
+        error_msg = "Ollama API 요청 시간 초과 (5분)"
         print(error_msg)
         return f"[ERROR] {error_msg}"
     except requests.exceptions.RequestException as e:
@@ -285,7 +276,7 @@ def translate_chunk(text: str) -> str:
         print(error_msg)
         return f"[ERROR] {error_msg}"
     except Exception as e:
-        error_msg = f"번역 중 오류 발생: {str(e)}"
+        error_msg = f"번역 중 예상치 못한 오류: {str(e)}"
         print(error_msg)
         return f"[ERROR] {error_msg}"
 
