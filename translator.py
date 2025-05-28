@@ -143,6 +143,7 @@ def translate_markdown(markdown_text: str, path: str = None) -> str:
     """
     print(f"\n[DEBUG] === 번역 과정 시작 ===\n")
     print(f"[DEBUG] 마크다운 문서 총 길이: {len(markdown_text)} 글자")
+    print(f"[DEBUG] 경로: {path}")
     
     # 초기 헤더 기준 분할 전 헤더 수 확인
     header_matches = list(HEADER_PATTERN.finditer(markdown_text))
@@ -178,6 +179,8 @@ def translate_markdown(markdown_text: str, path: str = None) -> str:
     # progress_manager에 청크 정보 저장
     if path:
         from progress_manager import progress_manager
+        print(f"[DEBUG] progress_manager에 청크 정보 저장 시작 - 경로: {path}")
+        
         # 각 청크의 정보 수집
         chunks_info = [
             {
@@ -187,8 +190,10 @@ def translate_markdown(markdown_text: str, path: str = None) -> str:
                 'preview': chunk[:50] + '...' if len(chunk) > 50 else chunk  # 미리보기
             } for i, chunk in enumerate(chunks)
         ]
+        
         # 총 청크 수와 청크 정보 설정
         progress_manager.set_total_chunks(path, len(chunks), chunks_info)
+        print(f"[DEBUG] progress_manager 청크 설정 완료: {len(chunks)}개")
     
     print(f"\n[DEBUG] === 번역 시작 ===\n")
     
@@ -198,6 +203,7 @@ def translate_markdown(markdown_text: str, path: str = None) -> str:
         
         # 현재 청크 진행 상황 업데이트
         if path:
+            print(f"[DEBUG] progress_manager 청크 진행 업데이트: {i}")
             progress_manager.update_chunk_progress(path, i, 'processing')
         
         # 청크 번역
@@ -206,6 +212,7 @@ def translate_markdown(markdown_text: str, path: str = None) -> str:
         
         # 번역 결과 저장
         if path:
+            print(f"[DEBUG] progress_manager 청크 결과 추가: {i}")
             progress_manager.add_chunk_result(path, i, translated)
         
         print(f"[DEBUG] 청크 {i+1} 번역 완료")
