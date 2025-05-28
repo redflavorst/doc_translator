@@ -802,52 +802,70 @@ def translation_status():
     if not path:
         return jsonify({'error': '경로가 지정되지 않았습니다.'}), 400
     
+    include_partial = request.args.get('include_partial', 'false').lower() == 'true'
+    
+    print(f"[DEBUG] 번역 상태 요청 - 경로: {path}, 부분결과포함: {include_partial}")
+    
     # 번역 상태 확인
     status_data = tasks.progress_manager.get(path)
+    print(f"[DEBUG] progress_manager 상태 데이터: {status_data}")
+    
     if status_data is None:
+        print(f"[DEBUG] 상태 데이터 없음 - not_found 반환")
         return jsonify({'status': 'not_found'})
     
-    # 상태가 디셔너리인 경우 (새 형식)
+    # 상태가 딕셔너리인 경우 (새 형식)
     if isinstance(status_data, dict):
         response = {
             'status': status_data.get('status', 'unknown'),
         }
+        
+        print(f"[DEBUG] 현재 상태: {response['status']}")
         
         # 번역 진행 상황 정보 추가
         if status_data.get('status') == 'running':
             # 총 청크 수와 완료된 청크 수
             total_chunks = status_data.get('total_chunks', 0)
             chunks_completed = status_data.get('chunks_completed', 0)
+            current_chunk = status_data.get('current_chunk', 0)
             
             # 진행률 계산 (0-100%)
             progress_percent = (chunks_completed / total_chunks * 100) if total_chunks > 0 else 0
             
             response.update({
                 'total_chunks': total_chunks,
-                'current_chunk': status_data.get('current_chunk', 0),
+                'current_chunk': current_chunk,
                 'chunks_completed': chunks_completed,
-                'progress_percent': progress_percent,
+                'progress_percent': round(progress_percent, 1),
                 'chunks_info': status_data.get('chunks_info', [])
             })
             
+            print(f"[DEBUG] 진행률 정보 - 완료: {chunks_completed}/{total_chunks} ({progress_percent:.1f}%)")
+            
             # 부분 결과 추가 (선택적)
-            include_partial = request.args.get('include_partial', 'false').lower() == 'true'
             if include_partial:
                 partial_results = tasks.progress_manager.get_partial_results(path)
-                response['partial_results'] = partial_results
+                if partial_results:
+                    response['partial_results'] = partial_results
+                    print(f"[DEBUG] 부분 결과 포함 - 길이: {len(partial_results)}자")
         
         # 오류 정보 추가
         if status_data.get('status') == 'error' and 'error' in status_data:
             response['error'] = status_data['error']
+            print(f"[DEBUG] 오류 상태: {response['error']}")
             
+        print(f"[DEBUG] 최종 응답: {response}")
         return jsonify(response)
     
     # 이전 형식의 상태 처리 (하위 호환성)
     elif status_data == 'running':
+        print(f"[DEBUG] 이전 형식 - running 상태")
         return jsonify({'status': 'running'})
     elif status_data == 'done':
+        print(f"[DEBUG] 이전 형식 - done 상태")
         return jsonify({'status': 'completed'})
     else:
+        print(f"[DEBUG] 이전 형식 - 기타 상태: {status_data}")
         return jsonify({'status': status_data})
 
 

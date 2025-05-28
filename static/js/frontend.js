@@ -2,6 +2,7 @@
 let currentFile = null;
 let currentPage = 1;
 let totalPages = 1;
+let translationStatusInterval = null;  // 번역 상태 체크를 위한 인터벌 ID
 
 // 언어 코드를 국기 이모지로 변환하는 함수
 function getLanguageFlag(languageCode) {
@@ -351,83 +352,338 @@ function triggerFileSelect() {
 
 // 번역 기능
 function translateSelected() {
+  console.log('[FRONTEND] translateSelected 함수 호출됨');
+  
   const checkboxes = document.querySelectorAll('input[type="checkbox"]:checked');
+  console.log('[FRONTEND] 선택된 체크박스 수:', checkboxes.length);
   
   if (checkboxes.length === 0) {
+    console.log('[FRONTEND] 선택된 파일이 없음');
     alert('번역할 파일을 선택해주세요.');
     return;
   }
   
-  checkboxes.forEach(checkbox => {
-    const filePath = checkbox.value;
-    startTranslation(filePath);
-  });
+  // 여러 파일 번역은 첫 번째 파일만 처리 (단순화)
+  const firstFile = checkboxes[0].value;
+  console.log('[FRONTEND] 첫 번째 선택된 파일:', firstFile);
+  
+  startTranslation(firstFile);
 }
 
 function startTranslation(filePath) {
-  const rightPanel = document.getElementById('right-panel');
-  rightPanel.innerHTML = `
-    <div class="p-4">
-      <h3>번역 중...</h3>
-      <p>${filePath.split(/[\\/]/).pop()}</p>
-    </div>
-  `;
+  console.log('[FRONTEND] === startTranslation 시작 ===');
+  console.log('[FRONTEND] 파일 경로:', filePath);
   
+  // 기존 번역 상태 체크 중지
+  if (translationStatusInterval) {
+    console.log('[FRONTEND] 기존 인터벌 정리');
+    clearInterval(translationStatusInterval);
+    translationStatusInterval = null;
+  }
+  
+  const rightPanel = document.getElementById('right-panel');
+  console.log('[FRONTEND] right-panel 요소:', rightPanel);
+  
+  if (!rightPanel) {
+    console.error('[FRONTEND] right-panel 요소를 찾을 수 없습니다!');
+    alert('UI 오류: right-panel을 찾을 수 없습니다.');
+    return;
+  }
+  
+  const fileName = filePath.split(/[\\/]/).pop();
+  console.log('[FRONTEND] 파일명:', fileName);
+  
+  console.log('[FRONTEND] 번역 UI 생성 중...');
+  
+  // 번역 진행률 UI 표시
+  const progressUI = createTranslationProgressUI(fileName);
+  console.log('[FRONTEND] 생성된 UI HTML 길이:', progressUI.length);
+  
+  rightPanel.innerHTML = progressUI;
+  console.log('[FRONTEND] UI HTML 삽입 완료');
+  
+  // UI가 제대로 생성되었는지 확인
+  setTimeout(() => {
+    const progressBar = document.getElementById('progress-bar');
+    const progressText = document.getElementById('progress-text');
+    const progressPercent = document.getElementById('progress-percent');
+    const chunksInfo = document.getElementById('chunks-info');
+    
+    console.log('[FRONTEND] UI 생성 확인:', {
+      progressBar: !!progressBar,
+      progressText: !!progressText,
+      progressPercent: !!progressPercent,
+      chunksInfo: !!chunksInfo
+    });
+    
+    if (!progressBar || !progressText || !progressPercent) {
+      console.error('[FRONTEND] 필수 UI 요소가 생성되지 않았습니다!');
+      console.log('[FRONTEND] 현재 right-panel 내용:', rightPanel.innerHTML.substring(0, 200) + '...');
+    } else {
+      console.log('[FRONTEND] UI 요소들이 성공적으로 생성되었습니다');
+    }
+  }, 100);
+  
+  // 번역 시작 API 호출
+  console.log('[FRONTEND] 번역 시작 API 호출...');
   fetch('/api/translate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ path: filePath })
   })
-  .then(res => res.json())
+  .then(res => {
+    console.log('[FRONTEND] 번역 시작 응답 상태:', res.status);
+    return res.json();
+  })
   .then(data => {
-    console.log('번역 시작:', data);
-    checkTranslationStatus(filePath);
+    console.log('[FRONTEND] 번역 시작 응답 데이터:', data);
+    if (data.status === 'started') {
+      // 번역 상태 모니터링 시작
+      console.log('[FRONTEND] 번역 상태 모니터링 시작');
+      startTranslationStatusCheck(filePath);
+    } else {
+      throw new Error(data.error || '번역 시작 실패');
+    }
   })
   .catch(error => {
-    console.error('번역 오류:', error);
-    rightPanel.innerHTML = `<div class="p-4 text-red-500">번역 오류: ${error.message}</div>`;
+    console.error('[FRONTEND] 번역 시작 오류:', error);
+    rightPanel.innerHTML = `
+      <div class="p-4 text-red-500">
+        <h3 class="font-semibold mb-2">번역 오류</h3>
+        <p>${error.message}</p>
+        <button onclick="startTranslation('${filePath}')" class="mt-3 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">
+          다시 시도
+        </button>
+      </div>
+    `;
   });
+  
+  console.log('[FRONTEND] === startTranslation 완료 ===');
 }
 
+// 번역 진행률 UI 생성
+function createTranslationProgressUI(fileName) {
+  console.log('[FRONTEND] createTranslationProgressUI 호출:', fileName);
+  
+  // 더 간단한 HTML로 테스트
+  const htmlContent = `
+    <div style="padding: 20px; background-color: white; border: 1px solid #ccc;">
+      <div style="display: flex; align-items: center; margin-bottom: 20px;">
+        <div style="width: 20px; height: 20px; border: 2px solid #3b82f6; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 10px;"></div>
+        <h3 style="margin: 0; font-size: 18px; font-weight: bold;">번역 진행 중</h3>
+      </div>
+      
+      <div style="margin-bottom: 20px;">
+        <p style="margin: 0 0 10px 0; font-size: 14px;">파일: <strong>${fileName}</strong></p>
+        <div style="background-color: #e5e7eb; border-radius: 10px; height: 12px; margin-bottom: 10px;">
+          <div id="progress-bar" style="background-color: #3b82f6; height: 12px; border-radius: 10px; width: 0%; transition: width 0.3s;"></div>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 12px; color: #6b7280;">
+          <span id="progress-text">준비 중...</span>
+          <span id="progress-percent">0%</span>
+        </div>
+      </div>
+      
+      <div style="background-color: #f9fafb; border-radius: 8px; padding: 15px;">
+        <h4 style="margin: 0 0 10px 0; font-size: 14px; font-weight: 600;">진행 상황</h4>
+        <div id="chunks-info" style="max-height: 160px; overflow-y: auto;">
+          <div style="font-size: 12px; color: #6b7280;">청크 분석 중...</div>
+        </div>
+      </div>
+      
+      <div id="partial-preview" style="margin-top: 15px; display: none;">
+        <h4 style="margin: 0 0 10px 0; font-size: 14px; font-weight: 600;">번역 결과 미리보기</h4>
+        <div style="background-color: white; border: 1px solid #d1d5db; border-radius: 6px; padding: 12px; max-height: 120px; overflow-y: auto; font-size: 12px;">
+          <div id="partial-content"></div>
+        </div>
+      </div>
+    </div>
+    
+    <style>
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    </style>
+  `;
+  
+  console.log('[FRONTEND] UI HTML 생성 완료, 길이:', htmlContent.length);
+  return htmlContent;
+}
+
+// 번역 상태 체크 시작
+function startTranslationStatusCheck(filePath) {
+  console.log('[FRONTEND] startTranslationStatusCheck 시작:', filePath);
+  
+  // 기존 인터벌 정리
+  if (translationStatusInterval) {
+    clearInterval(translationStatusInterval);
+  }
+  
+  // 즉시 한 번 실행
+  checkTranslationStatus(filePath);
+  
+  // 2초마다 상태 확인
+  translationStatusInterval = setInterval(() => {
+    checkTranslationStatus(filePath);
+  }, 2000);
+}
+
+// 번역 상태 확인
 function checkTranslationStatus(filePath) {
-  fetch(`/api/translation-status?path=${encodeURIComponent(filePath)}`)
-    .then(res => res.json())
+  console.log('[FRONTEND] 번역 상태 확인:', filePath);
+  
+  fetch(`/api/translation-status?path=${encodeURIComponent(filePath)}&include_partial=true`)
+    .then(res => {
+      if (!res.ok) {
+        throw new Error(`HTTP 오류 ${res.status}`);
+      }
+      return res.json();
+    })
     .then(data => {
-      if (data.status === 'completed') {
+      console.log('[FRONTEND] 상태 응답:', data);
+      
+      // 'done' 또는 'completed' 상태 모두 처리
+      if (data.status === 'completed' || data.status === 'done') {
+        // 번역 완료
+        console.log('[FRONTEND] 번역 완료');
+        clearInterval(translationStatusInterval);
         showTranslationResult(filePath);
       } else if (data.status === 'error') {
-        document.getElementById('right-panel').innerHTML = 
-          `<div class="p-4 text-red-500">번역 오류: ${data.error}</div>`;
+        // 오류 발생
+        console.error('[FRONTEND] 번역 오류:', data.error);
+        clearInterval(translationStatusInterval);
+        showTranslationError(filePath, data.error);
+      } else if (data.status === 'running') {
+        // 진행 중인 경우 진행률 업데이트
+        updateTranslationProgress(data);
       } else {
-        setTimeout(() => checkTranslationStatus(filePath), 2000);
+        console.log('[FRONTEND] 알 수 없는 상태:', data.status);
       }
     })
     .catch(error => {
-      console.error('상태 확인 오류:', error);
+      console.error('[FRONTEND] 상태 확인 실패:', error);
+      // 상태 확인 실패 시 5초 후 재시도
       setTimeout(() => checkTranslationStatus(filePath), 5000);
     });
 }
 
+// 번역 진행률 업데이트
+function updateTranslationProgress(data) {
+  const progressBar = document.getElementById('progress-bar');
+  const progressText = document.getElementById('progress-text');
+  const progressPercent = document.getElementById('progress-percent');
+  const chunksInfo = document.getElementById('chunks-info');
+  
+  if (progressBar && progressPercent) {
+    const percent = Math.round(data.progress_percent || 0);
+    progressBar.style.width = `${percent}%`;
+    progressPercent.textContent = `${percent}%`;
+  }
+  
+  if (progressText) {
+    progressText.textContent = `처리 중: ${data.chunks_completed || 0}/${data.total_chunks || 0} 청크`;
+  }
+  
+  // 청크 정보 업데이트
+  if (chunksInfo && data.chunks_info && Array.isArray(data.chunks_info)) {
+    chunksInfo.innerHTML = data.chunks_info.map((chunk, index) => {
+      let status = '⏳';
+      if (chunk.status === 'completed') status = '✅';
+      else if (chunk.status === 'error') status = '❌';
+      
+      return `
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; font-size: 12px;">
+          <span>${status} 청크 ${index + 1}: ${chunk.header || '제목 없음'}</span>
+          <span>${chunk.size || 0}자</span>
+        </div>
+      `;
+    }).join('');
+  }
+}
+
+// 번역 오류 표시
+function showTranslationError(filePath, error) {
+  const rightPanel = document.getElementById('right-panel');
+  if (!rightPanel) return;
+  
+  rightPanel.innerHTML = `
+    <div class="p-4">
+      <div class="bg-red-50 border-l-4 border-red-500 p-4">
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-red-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div class="ml-3">
+            <h3 class="text-sm font-medium text-red-800">번역 중 오류가 발생했습니다</h3>
+            <div class="mt-2 text-sm text-red-700">
+              <p>${error || '알 수 없는 오류가 발생했습니다.'}</p>
+            </div>
+            <div class="mt-4">
+              <button onclick="startTranslation('${filePath}')" class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                다시 시도
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// 번역 결과 표시
 function showTranslationResult(filePath) {
+  console.log('[FRONTEND] 번역 결과 표시:', filePath);
+  
   fetch(`/api/translation-result?path=${encodeURIComponent(filePath)}`)
-    .then(res => res.json())
+    .then(res => {
+      if (!res.ok) {
+        throw new Error(`HTTP 오류 ${res.status}`);
+      }
+      return res.json();
+    })
     .then(data => {
+      console.log('[FRONTEND] 번역 결과 수신:', data);
       const rightPanel = document.getElementById('right-panel');
+      
       if (data.content) {
         rightPanel.innerHTML = `
           <div class="p-4">
-            <h3 class="text-lg font-semibold mb-4">번역 결과</h3>
-            <div class="bg-white p-4 rounded border max-h-96 overflow-y-auto">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-semibold">번역 결과</h3>
+              <a href="/api/download?path=${encodeURIComponent(filePath)}" 
+                 class="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600">
+                다운로드
+              </a>
+            </div>
+            <div class="bg-white p-4 rounded border max-h-[500px] overflow-y-auto">
               <pre class="whitespace-pre-wrap text-sm">${data.content}</pre>
+            </div>
+            <div class="mt-4 text-sm text-gray-500">
+              <p>번역이 완료되었습니다. 위의 다운로드 버튼을 클릭하여 파일을 저장하세요.</p>
             </div>
           </div>
         `;
       } else {
-        rightPanel.innerHTML = `<div class="p-4 text-red-500">번역 결과를 불러올 수 없습니다.</div>`;
+        throw new Error('번역된 내용이 없습니다.');
       }
     })
     .catch(error => {
-      console.error('번역 결과 로드 오류:', error);
+      console.error('[FRONTEND] 번역 결과 로드 오류:', error);
+      const rightPanel = document.getElementById('right-panel');
+      if (rightPanel) {
+        rightPanel.innerHTML = `
+          <div class="p-4 text-red-500">
+            <h3 class="font-semibold mb-2">번역 결과 로드 실패</h3>
+            <p>${error.message}</p>
+            <button onclick="showTranslationResult('${filePath}')" class="mt-3 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+              다시 시도
+            </button>
+          </div>
+        `;
+      }
     });
 }
 
