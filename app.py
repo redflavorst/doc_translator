@@ -6,6 +6,8 @@ from pathlib import Path
 import webview
 import time
 
+_loaded = False
+
 def open_file_dialog():
     import tkinter as tk
     from tkinter import filedialog
@@ -90,42 +92,67 @@ def create_window():
     
     # 페이지 로드 완료 시 실행할 함수
     def on_loaded():
-        print("페이지 로드 완료 - API 초기화")
+        global _loaded
+        if _loaded:
+            print("페이지 이미 로드됨 - 중복 호출 방지 (Python)")
+            return
+        _loaded = True
+        
+        print("페이지 로드 완료 - API 초기화 시도")
         
         # 간단한 API 초기화
         init_script = """
         // API 준비되면 전역 함수 등록
         setTimeout(() => {
+            if (typeof window.apiInitialized !== 'undefined' && window.apiInitialized) {
+                console.log('API 이미 초기화됨 - 중복 호출 방지 (JS)');
+                return;
+            }
+            
             if (window.pywebview && window.pywebview.api) {
-                console.log('API 준비 완료');
+                console.log('API 준비 완료, 함수 등록 시도');
                 
                 window.triggerFolderSelect = function() {
-                    const result = window.pywebview.api.open_folder();
-                    if (result && typeof result.then === 'function') {
-                        return result.then(path => {
-                            if (path && typeof window.selectFolder === 'function') {
-                                window.selectFolder(path);
-                            }
-                            return path;
-                        });
-                    } else if (result && typeof window.selectFolder === 'function') {
-                        window.selectFolder(result);
+                    if (window.pywebview && window.pywebview.api && typeof window.pywebview.api.open_folder === 'function') {
+                        const result = window.pywebview.api.open_folder();
+                        if (result && typeof result.then === 'function') {
+                            return result.then(path => {
+                                if (path && typeof window.selectFolder === 'function') {
+                                    window.selectFolder(path);
+                                }
+                                return path;
+                            });
+                        } else if (result && typeof window.selectFolder === 'function') {
+                            window.selectFolder(result);
+                        }
+                        return result;
+                    } else {
+                        console.error('pywebview.api.open_folder is not available.');
+                        return null;
                     }
-                    return result;
                 };
                 
                 window.triggerFileSelect = function() {
-                    return window.pywebview.api.open_file();
+                    if (window.pywebview && window.pywebview.api && typeof window.pywebview.api.open_file === 'function') {
+                        return window.pywebview.api.open_file();
+                    } else {
+                        console.error('pywebview.api.open_file is not available.');
+                        return null;
+                    }
                 };
+                window.apiInitialized = true; // API 초기화 완료 플래그 설정
+                console.log('전역 함수 등록 완료 및 API 초기화 플래그 설정');
+            } else {
+                console.error('pywebview API를 찾을 수 없습니다. 초기화 실패.');
             }
         }, 500);
         """
         
         try:
             window.evaluate_js(init_script)
-            print("API 초기화 완료")
+            print("API 초기화 스크립트 실행 완료")
         except Exception as e:
-            print(f"API 초기화 오류: {e}")
+            print(f"API 초기화 스크립트 실행 오류: {e}")
     
     # 이벤트 핸들러 등록
     window.events.loaded += on_loaded
