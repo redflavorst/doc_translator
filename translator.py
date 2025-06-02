@@ -127,7 +127,9 @@ def translate_chunk(text: str, idx: int | None = None, total: int | None = None)
             'top_p': 0.3,
             'repeat_penalty': 1.0,
             'num_predict': 8000,
-            'stop': ['<think>', '<thinking>', '생각:', '추론:', '분석:', 'Let me think', 'I think', 'reasoning:', 'analysis:'],
+            # 'stop' 옵션을 사용하면 LLM이 <think> 등 특정 토큰에서 출력을
+            # 중단해 번역 결과가 비어 버리는 문제가 발생한다. 대신 응답 후
+            # 정규식으로 추론 텍스트를 제거한다.
             'num_ctx': 2048,
             'num_batch': 128,
             'num_gpu': 0,
