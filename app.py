@@ -73,7 +73,7 @@ def create_window():
     flask_thread.start()
     
     # 서버가 시작될 때까지 잠깐 대기 (최소한)
-    time.sleep(1)
+    time.sleep(2)  # 서버 시작 대기 시간 증가
     
     # API 인스턴스 생성
     api = PyWebViewAPI()

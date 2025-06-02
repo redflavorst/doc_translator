@@ -12,7 +12,7 @@ with open(PROMPT_FILE, 'r', encoding='utf-8') as f:
     PROMPTS = yaml.safe_load(f)
 
 # 마크다운 분할 관련 상수
-MAX_CHUNK_SIZE = 4000  # 최대 청크 크기 (문자 수)
+MAX_CHUNK_SIZE = 1500  # 최대 청크 크기 (문자 수)
 HEADER_PATTERN = re.compile(r'^(#{1,6}\s+.+)$', re.MULTILINE)  # 마크다운 헤더 패턴
 
 
@@ -227,9 +227,10 @@ def translate_chunk(text: str) -> str:
     """
     prompt = format_paragraph_prompt(text)
     data = {
-        'model': 'exaone3.5:2.4b',
+        'model': 'qwen3:4b',
         'prompt': prompt,
         'stream': False,  # 스트리밍 비활성화
+        'system': "Don't think, No need to explain, Just translate",
         'options': {
             'temperature': 0.1,
             'num_predict': 8000,  # 충분한 응답 길이

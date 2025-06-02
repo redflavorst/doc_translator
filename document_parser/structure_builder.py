@@ -16,7 +16,7 @@ def build_structure(text):
             page_number = page["page_number"]
             page_paragraphs = []
             for i, para in enumerate(page["paragraphs"]):
-                translated_para = translate_with_ollama(para, model='exaone3.5:2.4b')
+                translated_para = translate_with_ollama(para, model='qwen3:4b')
                 page_paragraphs.append({
                     "paragraph_index": i,
                     "original": para,
@@ -34,7 +34,7 @@ def build_structure(text):
         paragraphs = [p for p in text.split('\n') if p.strip()]
     structure = []
     for i, para in enumerate(paragraphs):
-        translated_para = translate_with_ollama(para, model='exaone3.5:2.4b')
+        translated_para = translate_with_ollama(para, model='qwen3:4b')
         structure.append({
             "paragraph_index": i,
             "original": para,

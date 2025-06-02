@@ -438,7 +438,7 @@ def detect_document_language(file_path: Path, sample_size: int = 5000) -> Tuple[
         logger.error(f"언어 감지 중 치명적 오류 발생 ({file_path}): {e}", exc_info=True)
         return 'en', 0.0
 
-def convert_pdf_to_markdown(pdf_path: Path, output_dir: Path = None, use_ocr: bool = False) -> str:
+def convert_pdf_to_markdown(pdf_path: Path, use_ocr: bool = False) -> str:
     """
     PDF 파일을 마크다운(.md) 파일로 변환하여 저장합니다.
     
@@ -447,46 +447,33 @@ def convert_pdf_to_markdown(pdf_path: Path, output_dir: Path = None, use_ocr: bo
     
     Args:
         pdf_path (Path): 변환할 PDF 파일 경로
-        output_dir (Path, optional): 마크다운 파일 저장 디렉토리. 
-                                   None인 경우 PDF와 같은 디렉토리에 저장됩니다.
         use_ocr (bool, optional): 이미지 기반 PDF의 경우 OCR 사용 여부. 
                                 기본값은 False입니다.
                                 
     Returns:
-        str: 변환된 마크다운 파일의 경로
+        str: 변환된 마크다운 콘텐츠
         
     Raises:
         FileNotFoundError: PDF 파일을 찾을 수 없는 경우
         RuntimeError: 변환 과정에서 오류가 발생한 경우
         
     Examples:
-        >>> convert_pdf_to_markdown(Path("document.pdf"))
-        'document.md'
+        >>> markdown_content = convert_pdf_to_markdown(Path("document.pdf"))
+        >>> # markdown_content는 이제 문자열입니다.
         
-        >>> convert_pdf_to_markdown(Path("scanned.pdf"), use_ocr=True)
-        'scanned.md'
+        >>> markdown_content_ocr = convert_pdf_to_markdown(Path("scanned.pdf"), use_ocr=True)
+        >>> # markdown_content_ocr는 이제 문자열입니다.
     """
     # 1. 입력 유효성 검사
     pdf_path = Path(pdf_path).resolve()
     if not pdf_path.exists() or not pdf_path.is_file():
         raise FileNotFoundError(f"PDF 파일을 찾을 수 없습니다: {pdf_path}")
     
-    # 2. 출력 디렉토리 설정
-    if output_dir is None:
-        output_dir = pdf_path.parent
-    else:
-        output_dir = Path(output_dir).resolve()
-        output_dir.mkdir(parents=True, exist_ok=True)
-    
-    # 3. 출력 파일 경로 생성
-    output_path = output_dir / f"{pdf_path.stem}.md"
-    
-    # 4. docling 모듈 로드 확인
+    # 2. docling 모듈 로드 확인
     if not docling_imported:
         raise ImportError("PDF 변환을 위해서는 docling 패키지가 필요합니다. 'pip install docling'으로 설치해주세요.")
     
     logger.info(f"PDF → Markdown 변환 시작: {pdf_path}")
-    logger.info(f"출력 경로: {output_path}")
     logger.info(f"OCR 사용: {'예' if use_ocr else '아니오'}")
     
     try:
@@ -527,27 +514,13 @@ def convert_pdf_to_markdown(pdf_path: Path, output_dir: Path = None, use_ocr: bo
         # 9. 마크다운 내보내기
         markdown_content = result.document.export_to_markdown()
         
-        # 10. 파일 저장 (UTF-8 인코딩으로 저장)
-        with open(output_path, 'w', encoding='utf-8') as f:
-            f.write(markdown_content)
-        
-        # 11. 파일 크기 확인
-        output_size = output_path.stat().st_size
-        logger.info(f"변환 완료: {output_path} (크기: {output_size/1024:.2f}KB)")
-        
-        return str(output_path)
+        # 10. 변환된 마크다운 콘텐츠 반환
+        logger.info(f"PDF → Markdown 변환 완료: {pdf_path} (콘텐츠 길이: {len(markdown_content)})")
+        return markdown_content
         
     except Exception as e:
         error_msg = f"PDF → Markdown 변환 실패: {str(e)}"
         logger.error(error_msg, exc_info=True)
-        
-        # 변환 중 오류가 발생한 경우 임시 파일 삭제
-        if output_path.exists():
-            try:
-                output_path.unlink()
-                logger.info(f"오류로 인해 생성된 파일을 삭제했습니다: {output_path}")
-            except Exception as delete_error:
-                logger.error(f"임시 파일 삭제 중 오류 발생: {delete_error}")
         
         raise RuntimeError(error_msg) from e
 

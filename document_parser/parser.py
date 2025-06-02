@@ -43,12 +43,12 @@ def load_restore_markdown_prompt(markdown_text):
     template = prompts['restore_markdown']['template'].replace('{{markdown_text}}', markdown_text)
     return desc + "\n\n" + template
 
-def call_ollama_llm(prompt, model='gemma3:4b', top_k=40):
+def call_ollama_llm(prompt, model='qwen3:4b', top_k=40):
     try:
         response = requests.post(
             "http://localhost:11434/api/generate",
             json={"model": model, "prompt": prompt, "options": {"top_k": top_k}},
-            stream=True
+            stream=False
         )
         lines = response.iter_lines(decode_unicode=True)
         result = ""
@@ -77,7 +77,7 @@ def generate_clean_markdown(input_path, revised_md_path=None):
         markdown = f.read()
     # 2. LLM 프롬프트 생성 및 호출
     prompt = load_restore_markdown_prompt(markdown)
-    revised_markdown = call_ollama_llm(prompt, model="gemma3:4b")
+    revised_markdown = call_ollama_llm(prompt, model="qwen3:4b")
     # 3. 결과 저장
     if revised_md_path is None:
         base, _ = os.path.splitext(md_path)

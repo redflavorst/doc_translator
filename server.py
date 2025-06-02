@@ -6,6 +6,10 @@ import logging
 from io import BytesIO
 from pathlib import Path
 from typing import Dict, Any, Optional, List, Tuple
+import subprocess
+import time
+import requests
+import atexit
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
@@ -19,6 +23,7 @@ langdetect_available = False
 # 로컬 모듈 임포트
 import file_utils
 import tasks
+from tasks import get_translated_file_path # Import the new helper function
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
@@ -512,7 +517,7 @@ def check_language():
             'error': f'언어 감지 중 오류가 발생했습니다: {str(e)}'
         }), 500
 
-@app.route('/api/select_file', methods=['POST'])
+@app.route('/api/select-file', methods=['POST'])
 def select_file():
     """
     파일을 선택하고 파일 정보를 반환합니다.
@@ -875,11 +880,11 @@ def translation_result():
     if not path:
         return jsonify({'error': '경로가 지정되지 않았습니다.'}), 400
     
-    file_path = Path(path)
-    translated_path = tasks.TRANSLATED_DIR / (file_path.stem + '.txt')
+    # Use the helper function from tasks.py to get the new path
+    translated_path = get_translated_file_path(path)
     
     if not translated_path.exists():
-        return jsonify({'error': '번역 파일을 찾을 수 없습니다.'}), 404
+        return jsonify({'error': f'번역 파일을 찾을 수 없습니다: {translated_path}'}), 404
     
     try:
         with open(translated_path, 'r', encoding='utf-8') as f:
@@ -933,7 +938,113 @@ def download_file():
         return jsonify({'error': f'파일 다운로드 중 오류가 발생했습니다: {str(e)}'}), 500
 
 
+# Ollama server process
+ollama_process = None
+
+def is_ollama_running():
+    """Checks if the Ollama server is running and responsive."""
+    try:
+        response = requests.get("http://localhost:11434/api/tags", timeout=2)
+        response.raise_for_status() # Raise an exception for HTTP errors
+        logger.info("Ollama server is already running.")
+        return True
+    except requests.exceptions.ConnectionError:
+        logger.info("Ollama server is not running (connection error).")
+        return False
+    except requests.exceptions.Timeout:
+        logger.warning("Ollama server timed out. It might be starting up or unresponsive.")
+        return False
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error checking Ollama status: {e}")
+        return False
+
+def start_ollama_server():
+    """Starts the Ollama server if it's not already running."""
+    global ollama_process
+    if is_ollama_running():
+        return
+
+    try:
+        logger.info("Attempting to start Ollama server...")
+        ollama_executable = "ollama" # Assumes 'ollama' is in PATH
+
+        if os.name == 'nt': # For Windows
+            from subprocess import CREATE_NO_WINDOW
+            ollama_process = subprocess.Popen(
+                [ollama_executable, "serve"],
+                creationflags=CREATE_NO_WINDOW,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+            )
+        else: # For macOS/Linux
+            ollama_process = subprocess.Popen(
+                [ollama_executable, "serve"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+            )
+
+        logger.info(f"Ollama server process started with PID: {ollama_process.pid if ollama_process else 'Unknown'}.")
+        time.sleep(5) # Adjust as needed, give server time to start
+        if not is_ollama_running():
+            logger.warning("Ollama server process was started, but it's not responsive yet.")
+            if ollama_process:
+                try:
+                    stdout, stderr = ollama_process.communicate(timeout=1) # Non-blocking check for output
+                    if stdout and stdout.strip():
+                        logger.info(f"Ollama server stdout: {stdout.decode(errors='ignore').strip()}")
+                    if stderr and stderr.strip():
+                        logger.error(f"Ollama server stderr: {stderr.decode(errors='ignore').strip()}")
+                except subprocess.TimeoutExpired:
+                    logger.info("Ollama server process is still running, no immediate output.")
+        else:
+            logger.info("Ollama server is now running and responsive.")
+
+    except FileNotFoundError:
+        logger.error(
+            f"'{ollama_executable}' command not found. Please ensure Ollama is installed and in your system's PATH."
+        )
+        ollama_process = None
+    except Exception as e:
+        logger.error(f"Failed to start Ollama server: {e}")
+        ollama_process = None
+
+def stop_ollama_server():
+    """Stops the Ollama server if it was started by this application."""
+    global ollama_process
+    if ollama_process and ollama_process.poll() is None: # Check if process exists and is running
+        logger.info(f"Stopping Ollama server (PID: {ollama_process.pid})...")
+        try:
+            ollama_process.terminate() # Send SIGTERM
+            ollama_process.wait(timeout=10) # Wait for graceful shutdown
+            logger.info("Ollama server terminated gracefully.")
+        except subprocess.TimeoutExpired:
+            logger.warning("Ollama server did not terminate gracefully within timeout. Forcing kill...")
+            ollama_process.kill() # Send SIGKILL
+            ollama_process.wait() # Wait for forced shutdown
+            logger.info("Ollama server killed.")
+        except Exception as e:
+            logger.error(f"Error stopping Ollama server: {e}")
+        finally:
+            ollama_process = None
+    elif ollama_process and ollama_process.poll() is not None:
+        logger.info("Ollama server process was already terminated or not started by this app.")
+        ollama_process = None
+    else:
+        logger.info("No Ollama server process to stop (was not started by this app or already stopped).")
+
+
 if __name__ == '__main__':
-    # 서버 종료 시 자원을 정리하도록 설정
+    # Start Ollama server
+    start_ollama_server()
+
+    # Register stop_ollama_server to be called on exit
+    atexit.register(stop_ollama_server)
+
+    # 서버 종료 시 자원을 정리하도록 설정 (Original line)
     app.config['PROPAGATE_EXCEPTIONS'] = True
-    app.run(port=5000, threaded=True, use_reloader=False)
+    
+    # Run Flask app
+    # use_reloader=False is important when managing external processes like Ollama,
+    # as the reloader can cause multiple instances or issues with process management.
+    logger.info("Starting Flask application server on http://0.0.0.0:5000")
+    app.run(host='0.0.0.0', port=5000, threaded=True, use_reloader=False)

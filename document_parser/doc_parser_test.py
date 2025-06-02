@@ -78,7 +78,7 @@ def load_restore_markdown_prompt(block_text, yaml_path="../prompt/restore_markdo
     template = prompts['restore_markdown']['template'].replace('{{markdown_text}}', block_text)
     return desc + "\n\n" + template
 
-def call_ollama_llm(prompt, model='exaone3.5:2.4b'):
+def call_ollama_llm(prompt, model='qwen3:4b'):
     try:
         response = requests.post(
             "http://localhost:11434/api/generate",
