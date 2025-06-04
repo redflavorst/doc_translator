@@ -12,11 +12,14 @@ function renderMarkdown(mdText) {
     if (typeof marked !== 'undefined' && typeof marked.parse === 'function') {
       return marked.parse(mdText);
     }
+    if (typeof simpleMarkdownParse === 'function') {
+      return simpleMarkdownParse(mdText);
+    }
   } catch (e) {
-    console.warn('marked.parse 실패:', e);
+    console.error('마크다운 파싱 실패:', e);
   }
-  // marked가 로드되지 않았거나 오류 발생 시 원본 텍스트 표시
-  return `<pre class="whitespace-pre-wrap text-sm">${mdText}</pre>`;
+  // 파싱에 완전히 실패한 경우 간단한 오류 메시지만 표시
+  return '<p class="text-red-500">마크다운 렌더링 오류가 발생했습니다.</p>';
 }
 
 // 언어 코드를 국기 이모지로 변환하는 함수
