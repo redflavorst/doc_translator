@@ -724,11 +724,17 @@ function displayTranslatedContentOrPlaceholder(filePath) {
           </div>
         `;
       } else if (data.content) {
-        const downloadPath = data.translated_path || filePath; 
+        const downloadPath = data.translated_path || filePath;
         const fileName = downloadPath.split(/[\\/]/).pop();
+        let htmlContent;
+        if (typeof marked !== 'undefined') {
+          htmlContent = marked.parse(data.content);
+        } else {
+          htmlContent = `<pre class="whitespace-pre-wrap text-sm">${data.content}</pre>`;
+        }
         rightPanel.innerHTML = `
-          <div class="p-4">
-            <div class="flex items-center justify-between mb-4">
+          <div class="p-4 flex flex-col h-full">
+            <div class="flex items-center justify-between mb-4 flex-shrink-0">
               <h3 class="text-lg font-semibold">번역 결과</h3>
               <a href="/api/download?path=${encodeURIComponent(downloadPath)}"
                  class="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
@@ -736,8 +742,11 @@ function displayTranslatedContentOrPlaceholder(filePath) {
                 다운로드
               </a>
             </div>
-            <div class="bg-white p-4 rounded border max-h-[500px] overflow-y-auto">
-              <pre class="whitespace-pre-wrap text-sm">${data.content}</pre>
+            <div class="prose max-w-none h-full overflow-y-auto bg-white p-4 rounded border flex-grow">
+              ${htmlContent}
+            </div>
+            <div class="mt-4 text-sm text-gray-500 flex-shrink-0">
+              <p>번역이 완료되었습니다. 위의 다운로드 버튼을 클릭하여 파일을 저장하세요.</p>
             </div>
           </div>
         `;
