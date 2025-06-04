@@ -42,7 +42,7 @@ class ProgressManager:
                 self._progress[path]['current_chunk'] = chunk_index
                 if chunk_index < len(self._progress[path]['chunks_info']):
                     self._progress[path]['chunks_info'][chunk_index]['status'] = status
-                print(f"[PROGRESS] 청크 진행 업데이트 - {path}: 청크 {chunk_index} -> {status}")
+                #print(f"[PROGRESS] 청크 진행 업데이트 - {path}: 청크 {chunk_index} -> {status}")
             else:
                 print(f"[PROGRESS] 경고: {path}가 progress에 없음 (update_chunk_progress)")
 
@@ -86,14 +86,14 @@ class ProgressManager:
         with self._lock:
             progress_data = self._progress.get(path)
             if isinstance(progress_data, dict):
-                print(f"[PROGRESS] 상태 조회 - {path}: {progress_data.get('status', 'unknown')}")
+                #print(f"[PROGRESS] 상태 조회 - {path}: {progress_data.get('status', 'unknown')}")
                 return progress_data.copy()  # 복사본 반환
             elif progress_data == 'running':
                 # 이전 형식의 데이터를 새 형식으로 변환
-                print(f"[PROGRESS] 이전 형식 변환 - {path}: running")
+                #print(f"[PROGRESS] 이전 형식 변환 - {path}: running")
                 return {'status': 'running'}
             elif progress_data == 'done':
-                print(f"[PROGRESS] 이전 형식 변환 - {path}: done")
+                #print(f"[PROGRESS] 이전 형식 변환 - {path}: done")
                 return {'status': 'done'}
             
             print(f"[PROGRESS] 상태 없음 - {path}")
@@ -108,15 +108,15 @@ class ProgressManager:
                 # 빈 문자열이 아닌 결과만 합치기
                 results = [r for r in self._progress[path]['partial_results'] if r.strip()]
                 combined = '\n'.join(results)
-                print(f"[PROGRESS] 부분 결과 조회 - {path}: {len(combined)}자")
+                #print(f"[PROGRESS] 부분 결과 조회 - {path}: {len(combined)}자")
                 return combined
             
-            print(f"[PROGRESS] 부분 결과 없음 - {path}")
+            #print(f"[PROGRESS] 부분 결과 없음 - {path}")
             return ''
 
     def all(self):
         with self._lock:
-            print(f"[PROGRESS] 전체 상태 조회: {list(self._progress.keys())}")
+            #print(f"[PROGRESS] 전체 상태 조회: {list(self._progress.keys())}")
             return {k: v.copy() if isinstance(v, dict) else v for k, v in self._progress.items()}
 
 progress_manager = ProgressManager()

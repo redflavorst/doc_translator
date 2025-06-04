@@ -27,6 +27,10 @@ from tasks import get_translated_file_path # Import the new helper function
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
+# Werkzeug 로거 가져오기 및 INFO 레벨 로그 비활성화 (WARNING, ERROR는 계속 표시)
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.WARNING) # WARNING 레벨 이상만 출력하도록 설정 (INFO 로그는 숨김)
+
 # 서비스 초기화 플래그
 _services_initialized = False
 
@@ -809,11 +813,11 @@ def translation_status():
     
     include_partial = request.args.get('include_partial', 'false').lower() == 'true'
     
-    print(f"[DEBUG] 번역 상태 요청 - 경로: {path}, 부분결과포함: {include_partial}")
+    #print(f"[DEBUG] 번역 상태 요청 - 경로: {path}, 부분결과포함: {include_partial}")
     
     # 번역 상태 확인
     status_data = tasks.progress_manager.get(path)
-    print(f"[DEBUG] progress_manager 상태 데이터: {status_data}")
+    #print(f"[DEBUG] progress_manager 상태 데이터: {status_data}")
     
     if status_data is None:
         print(f"[DEBUG] 상태 데이터 없음 - not_found 반환")
@@ -889,7 +893,7 @@ def translation_result():
     try:
         with open(translated_path, 'r', encoding='utf-8') as f:
             content = f.read()
-        return jsonify({'content': content})
+        return jsonify({'content': content, 'translated_path': str(translated_path)})
     except Exception as e:
         return jsonify({'error': f'번역 파일을 읽는 중 오류가 발생했습니다: {str(e)}'}), 500
 

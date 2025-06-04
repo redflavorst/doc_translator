@@ -43,7 +43,7 @@ def load_restore_markdown_prompt(markdown_text):
     template = prompts['restore_markdown']['template'].replace('{{markdown_text}}', markdown_text)
     return desc + "\n\n" + template
 
-def call_ollama_llm(prompt, model='qwen3:4b', top_k=40):
+def call_ollama_llm(prompt, model='qwen3:4b', top_k=5):
     try:
         response = requests.post(
             "http://localhost:11434/api/generate",

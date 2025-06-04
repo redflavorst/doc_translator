@@ -6,6 +6,7 @@ import logging
 
 # 로거 설정
 logger = logging.getLogger(__name__)
+s = requests.Session() # Global session for TCP connection reuse
 
 def load_prompt(template_key, **kwargs):
     prompt_path = os.path.join(os.path.dirname(__file__), '..', 'prompt', 'tax_translation_prompt.yaml')
@@ -20,21 +21,29 @@ def load_prompt(template_key, **kwargs):
     return merged_prompt
 
 
-def translate_with_ollama(text, model='qwen3:4b', top_k=40):
+def translate_with_ollama(text, model='qwen3:4b'):
     prompt = load_prompt('paragraph_translation', source_paragraph=text)
-    logger.info(f"[Ollama 호출 준비] 모델: {model}, top_k: {top_k}")
+    prompt += " /no_think"  # 안전장치 추가
+    logger.info(f"[Ollama 호출 준비] 모델: {model}") # top_k 제거됨
     # 프롬프트가 매우 길 수 있으므로, 일부만 로깅하거나 DEBUG 레벨로 로깅하는 것을 고려
     logger.info(f"[Ollama 프롬프트 일부] {prompt[:200]}...") 
 
-    request_payload = {"model": model, "prompt": prompt, "options": {"top_k": top_k}}
+    request_payload = {
+        "model": model,
+        "prompt": prompt,
+        "stream": True,  # 스트리밍 활성화
+        "options": {
+            "enable_thinking": False # top_k 제거, Ollama 기본값 사용
+        }
+    }
     logger.debug(f"Ollama 요청 페이로드: {json.dumps(request_payload, ensure_ascii=False)}")
 
     try:
         logger.info(f"Ollama API 요청 시작: http://localhost:11434/api/generate, 모델: {model}")
-        response = requests.post(
+        response = s.post( # 세션 사용 및 stream=True로 변경
             "http://localhost:11434/api/generate",
             json=request_payload,
-            stream=False,
+            stream=True,
             timeout=300  # 300초 타임아웃 설정
         )
         logger.info(f"[Ollama 응답코드] {response.status_code}")

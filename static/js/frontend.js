@@ -207,12 +207,16 @@ async function selectFolder(folderPath) {
 function loadFile(filePath) {
   console.log('파일 로드:', filePath);
   const ext = filePath.split('.').pop().toLowerCase();
-  
+
+  // Update left panel
   if (ext === 'pdf') {
     loadPDFView(filePath, 1);
   } else {
     loadDocumentView(filePath);
   }
+
+  // Update right panel with translation or placeholder
+  displayTranslatedContentOrPlaceholder(filePath);
 }
 
 // PDF 로드
@@ -631,6 +635,76 @@ function showTranslationError(filePath, error) {
       </div>
     </div>
   `;
+}
+
+// 번역 결과 또는 플레이스홀더 표시
+function displayTranslatedContentOrPlaceholder(filePath) {
+  const rightPanel = document.getElementById('right-panel');
+  if (!rightPanel) {
+    console.error('[FRONTEND] right-panel 요소를 찾을 수 없습니다!');
+    return;
+  }
+
+  rightPanel.innerHTML = '<div class="p-4 text-gray-500">번역된 내용을 불러오는 중...</div>';
+
+  fetch(`/api/translation-result?path=${encodeURIComponent(filePath)}`)
+    .then(res => {
+      if (res.status === 404) { // Translated file not found
+        return { notFound: true };
+      }
+      if (!res.ok) {
+        return res.json().then(errData => {
+          throw new Error(errData.error || `HTTP 오류 ${res.status}`);
+        }).catch(() => { 
+          throw new Error(`HTTP 오류 ${res.status}`);
+        });
+      }
+      return res.json(); // Translated content exists
+    })
+    .then(data => {
+      if (data.notFound) {
+        rightPanel.innerHTML = `
+          <div class="p-4">
+            <h3 class="text-lg font-semibold mb-2">번역</h3>
+            <div class="bg-white p-4 rounded border text-gray-600">
+              번역된 내용이 여기에 표시됩니다.
+            </div>
+          </div>
+        `;
+      } else if (data.content) {
+        const downloadPath = data.translated_path || filePath; 
+        const fileName = downloadPath.split(/[\\/]/).pop();
+        rightPanel.innerHTML = `
+          <div class="p-4">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-semibold">번역 결과</h3>
+              <a href="/api/download?path=${encodeURIComponent(downloadPath)}"
+                 class="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
+                 download="${fileName}">
+                다운로드
+              </a>
+            </div>
+            <div class="bg-white p-4 rounded border max-h-[500px] overflow-y-auto">
+              <pre class="whitespace-pre-wrap text-sm">${data.content}</pre>
+            </div>
+          </div>
+        `;
+      } else {
+        throw new Error('번역된 내용이 없거나 형식이 잘못되었습니다.');
+      }
+    })
+    .catch(error => {
+      console.error('[FRONTEND] 번역 결과 또는 플레이스홀더 표시 오류:', error);
+      rightPanel.innerHTML = `
+        <div class="p-4 text-red-500">
+          <h3 class="font-semibold mb-2">오류</h3>
+          <p>번역된 내용을 가져오는 중 오류가 발생했습니다: ${error.message}</p>
+          <button onclick="displayTranslatedContentOrPlaceholder('${filePath}')" class="mt-3 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+            다시 시도
+          </button>
+        </div>
+      `;
+    });
 }
 
 // 번역 결과 표시
