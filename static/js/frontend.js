@@ -283,9 +283,9 @@ async function loadPDFView(filePath, page = 1) {
   }
 
   // Clear right panel when loading a new PDF
-  const rightPanel = document.getElementById('right-panel');
+  const rightPanel = document.getElementById('translation-container');
   if (rightPanel) {
-      rightPanel.innerHTML = '<div class="text-neutral-500 text-center py-8">번역된 내용이 여기에 표시됩니다.</div>';
+      rightPanel.innerHTML = '<div class="flex items-center justify-center h-full text-neutral-500"><p>번역된 내용이 여기에 표시됩니다.</p></div>';
   }
 
   const viewer = document.getElementById('viewer-container');
@@ -450,12 +450,12 @@ function startTranslation(filePath) {
     translationStatusInterval = null;
   }
   
-  const rightPanel = document.getElementById('right-panel');
-  console.log('[FRONTEND] right-panel 요소:', rightPanel);
+  const rightPanel = document.getElementById('translation-container');
+  console.log('[FRONTEND] translation-container 요소:', rightPanel);
   
   if (!rightPanel) {
-    console.error('[FRONTEND] right-panel 요소를 찾을 수 없습니다!');
-    alert('UI 오류: right-panel을 찾을 수 없습니다.');
+    console.error('[FRONTEND] translation-container 요소를 찾을 수 없습니다!');
+    alert('UI 오류: translation-container를 찾을 수 없습니다.');
     return;
   }
   
@@ -487,7 +487,7 @@ function startTranslation(filePath) {
     
     if (!progressBar || !progressText || !progressPercent) {
       console.error('[FRONTEND] 필수 UI 요소가 생성되지 않았습니다!');
-      console.log('[FRONTEND] 현재 right-panel 내용:', rightPanel.innerHTML.substring(0, 200) + '...');
+      console.log('[FRONTEND] 현재 translation-container 내용:', rightPanel.innerHTML.substring(0, 200) + '...');
     } else {
       console.log('[FRONTEND] UI 요소들이 성공적으로 생성되었습니다');
     }
@@ -673,7 +673,7 @@ function updateTranslationProgress(data) {
 
 // 번역 오류 표시
 function showTranslationError(filePath, error) {
-  const rightPanel = document.getElementById('right-panel');
+  const rightPanel = document.getElementById('translation-container');
   if (!rightPanel) return;
   
   rightPanel.innerHTML = `
@@ -704,9 +704,9 @@ function showTranslationError(filePath, error) {
 
 // 번역 결과 또는 플레이스홀더 표시
 function displayTranslatedContentOrPlaceholder(filePath) {
-  const rightPanel = document.getElementById('right-panel');
+  const rightPanel = document.getElementById('translation-container');
   if (!rightPanel) {
-    console.error('[FRONTEND] right-panel 요소를 찾을 수 없습니다!');
+    console.error('[FRONTEND] translation-container 요소를 찾을 수 없습니다!');
     return;
   }
 
@@ -789,7 +789,7 @@ function showTranslationResult(filePath) {
     })
     .then(data => {
       console.log('[FRONTEND] 서버로부터 받은 번역 결과 데이터:', data);
-      const rightPanel = document.getElementById('right-panel');
+      const rightPanel = document.getElementById('translation-container');
       
       if (data.content) {
         console.log('[FRONTEND] 번역 결과 마크다운 내용:', data.content);
@@ -820,7 +820,7 @@ function showTranslationResult(filePath) {
     })
     .catch(error => {
       console.error('[FRONTEND] 번역 결과 로드 또는 처리 중 오류:', error);
-      const rightPanel = document.getElementById('right-panel');
+      const rightPanel = document.getElementById('translation-container');
       if (rightPanel) {
         rightPanel.innerHTML = `
           <div class="p-4 text-red-500">
