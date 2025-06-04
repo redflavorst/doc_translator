@@ -18,7 +18,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
 
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <!-- 로컬에서 간단한 마크다운 파서를 사용합니다 -->
+  <script src="/static/js/simple_markdown.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
     
@@ -274,9 +275,11 @@
         </div>
       </div>
       
-      <div id="right-panel" class="border-l border-neutral-200 bg-neutral-50 p-4">
-        <div class="text-neutral-500 text-center py-8">
-          번역된 내용이 여기에 표시됩니다.
+      <div id="right-panel" class="border-l border-neutral-200 bg-neutral-50">
+        <div id="translation-container" class="h-full">
+          <div class="flex items-center justify-center h-full text-neutral-500">
+            <p>번역된 내용이 여기에 표시됩니다.</p>
+          </div>
         </div>
       </div>
     </div>
