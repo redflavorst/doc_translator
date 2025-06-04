@@ -6,6 +6,19 @@ let translationStatusInterval = null;  // 번역 상태 체크를 위한 인터�
 let currentOriginalMarkdownPath = null; // 원본 마크다운 파일 경로
 let leftPanelViewMode = 'pdf'; // 좌측 패널 보기 모드: 'pdf' 또는 'md'
 
+// 공통 마크다운 렌더링 함수
+function renderMarkdown(mdText) {
+  try {
+    if (typeof marked !== 'undefined' && typeof marked.parse === 'function') {
+      return marked.parse(mdText);
+    }
+  } catch (e) {
+    console.warn('marked.parse 실패:', e);
+  }
+  // marked가 로드되지 않았거나 오류 발생 시 원본 텍스트 표시
+  return `<pre class="whitespace-pre-wrap text-sm">${mdText}</pre>`;
+}
+
 // 언어 코드를 국기 이모지로 변환하는 함수
 function getLanguageFlag(languageCode) {
   const flagMap = {
@@ -726,12 +739,7 @@ function displayTranslatedContentOrPlaceholder(filePath) {
       } else if (data.content) {
         const downloadPath = data.translated_path || filePath;
         const fileName = downloadPath.split(/[\\/]/).pop();
-        let htmlContent;
-        if (typeof marked !== 'undefined') {
-          htmlContent = marked.parse(data.content);
-        } else {
-          htmlContent = `<pre class="whitespace-pre-wrap text-sm">${data.content}</pre>`;
-        }
+        const htmlContent = renderMarkdown(data.content);
         rightPanel.innerHTML = `
           <div class="p-4 flex flex-col h-full">
             <div class="flex items-center justify-between mb-4 flex-shrink-0">
@@ -784,16 +792,9 @@ function showTranslationResult(filePath) {
       const rightPanel = document.getElementById('right-panel');
       
       if (data.content) {
-        // Ensure marked is available
-        if (typeof marked === 'undefined') {
-          rightPanel.innerHTML = `<div class="p-4 text-red-500">Markdown 라이브러리(marked.js)를 로드할 수 없습니다.</div>`;
-          console.error('[FRONTEND] marked.js 라이브러리를 찾을 수 없습니다.');
-          return;
-        }
-
-        console.log('[FRONTEND] marked.parse에 전달될 원본 번역 내용 (data.content):', data.content); // 로그 추가
-        const translatedHtmlContent = marked.parse(data.content);
-        console.log('[FRONTEND] marked.parse 후 변환된 HTML 내용 (translatedHtmlContent):', translatedHtmlContent); // 로그 추가
+        console.log('[FRONTEND] 번역 결과 마크다운 내용:', data.content);
+        const translatedHtmlContent = renderMarkdown(data.content);
+        console.log('[FRONTEND] 변환된 HTML 내용 (translatedHtmlContent):', translatedHtmlContent); // 로그 추가
 
         rightPanel.innerHTML = `
           <div class="p-4 flex flex-col h-full">
@@ -947,11 +948,7 @@ async function toggleLeftPanelView(mode) {
 
       // response.ok가 true (HTTP 200)인 경우
       if (data.content !== undefined) {
-        if (typeof marked === 'undefined') {
-          viewerContainer.innerHTML = '<div class="flex items-center justify-center h-full text-red-500"><p>Markdown 라이브러리(marked.js)를 로드할 수 없습니다.</p></div>';
-          return;
-        }
-        const htmlContent = marked.parse(data.content);
+        const htmlContent = renderMarkdown(data.content);
         viewerContainer.innerHTML = `<div class="prose max-w-none p-4 overflow-y-auto h-full">${htmlContent}</div>`;
       } else {
         // HTTP 200 응답이지만 예상치 못한 content가 없는 경우
