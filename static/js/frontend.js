@@ -1,5 +1,37 @@
 // 전역 변수
 let currentFile = null;
+
+// 새로운 공통 함수: 마크다운을 가져와 파싱합니다.
+async function fetchAndParseMarkdown(filePath, apiEndpoint) {
+  if (!filePath) {
+    return Promise.reject(new Error('파일 경로가 없습니다.'));
+  }
+
+  try {
+    // API 엔드포인트에 이미 쿼리 문자열 시작인 '?'가 포함되어 있을 수 있으므로, 
+    // 경로 파라미터만 추가하도록 수정합니다.
+    const apiUrl = `${apiEndpoint}?path=${encodeURIComponent(filePath)}`;
+    const response = await fetch(apiUrl);
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || `서버 오류: ${response.status}`);
+    }
+
+    if (data.content !== undefined) {
+      if (typeof marked === 'undefined') {
+        throw new Error('Markdown 라이브러리(marked.js)를 로드할 수 없습니다.');
+      }
+      return marked.parse(data.content);
+    } else {
+      throw new Error('마크다운 내용을 찾을 수 없습니다 (잘못된 서버 응답).');
+    }
+  } catch (error) {
+    console.error(`Error loading/parsing markdown from ${apiEndpoint} for ${filePath}:`, error);
+    throw error; // 호출자가 오류를 처리하도록 다시 throw
+  }
+}
+
 let currentPage = 1;
 let totalPages = 1;
 let translationStatusInterval = null;  // 번역 상태 체크를 위한 인터벌 ID
@@ -763,29 +795,25 @@ function displayTranslatedContentOrPlaceholder(filePath) {
 function showTranslationResult(filePath) {
   console.log('[FRONTEND] 번역 결과 표시 요청:', filePath);
   
-  fetch(`/api/translation-result?path=${encodeURIComponent(filePath)}`)
-    .then(res => {
-      if (!res.ok) {
-        throw new Error(`HTTP 오류 ${res.status}`);
-      }
-      return res.json();
-    })
-    .then(data => {
-      console.log('[FRONTEND] 서버로부터 받은 번역 결과 데이터:', data);
-      const rightPanel = document.getElementById('right-panel');
-      
-      if (data.content) {
-        // Ensure marked is available
-        if (typeof marked === 'undefined') {
-          rightPanel.innerHTML = `<div class="p-4 text-red-500">Markdown 라이브러리(marked.js)를 로드할 수 없습니다.</div>`;
-          console.error('[FRONTEND] marked.js 라이브러리를 찾을 수 없습니다.');
-          return;
-        }
+  const rightPanel = document.getElementById('right-panel');
+    // 초기 로딩 UI 설정
+    rightPanel.innerHTML = `
+      <div class="p-4 flex flex-col h-full">
+        <div class="flex items-center justify-between mb-4 flex-shrink-0">
+          <h3 class="text-lg font-semibold">번역 결과</h3>
+          <span class="text-sm text-neutral-500">로딩 중...</span>
+        </div>
+        <div class="prose-placeholder flex-grow flex items-center justify-center text-neutral-400">
+          <p>번역 내용 로딩 중...</p>
+        </div>
+        <div class="mt-4 text-sm text-gray-500 flex-shrink-0">
+          <p>잠시만 기다려 주세요.</p>
+        </div>
+      </div>
+    `;
 
-        console.log('[FRONTEND] marked.parse에 전달될 원본 번역 내용 (data.content):', data.content); // 로그 추가
-        const translatedHtmlContent = marked.parse(data.content);
-        console.log('[FRONTEND] marked.parse 후 변환된 HTML 내용 (translatedHtmlContent):', translatedHtmlContent); // 로그 추가
-
+    fetchAndParseMarkdown(filePath, '/api/translation-result')
+      .then(translatedHtmlContent => {
         rightPanel.innerHTML = `
           <div class="p-4 flex flex-col h-full">
             <div class="flex items-center justify-between mb-4 flex-shrink-0">
@@ -803,15 +831,9 @@ function showTranslationResult(filePath) {
             </div>
           </div>
         `;
-      } else {
-        console.warn('[FRONTEND] 번역된 내용(data.content)이 없습니다.');
-        throw new Error('번역된 내용이 없습니다.');
-      }
-    })
-    .catch(error => {
-      console.error('[FRONTEND] 번역 결과 로드 또는 처리 중 오류:', error);
-      const rightPanel = document.getElementById('right-panel');
-      if (rightPanel) {
+      })
+      .catch(error => {
+        console.error('[FRONTEND] 번역 결과 로드 또는 처리 중 오류 (refactored):', error);
         rightPanel.innerHTML = `
           <div class="p-4 text-red-500">
             <h3 class="font-semibold mb-2">번역 결과 로드 실패</h3>
@@ -821,8 +843,7 @@ function showTranslationResult(filePath) {
             </button>
           </div>
         `;
-      }
-    });
+      });
 }
 
 // 초기화
@@ -918,7 +939,6 @@ async function toggleLeftPanelView(mode) {
       pageControls.classList.add('hidden');
       return;
     }
-    viewerContainer.innerHTML = '<div class="flex items-center justify-center h-full text-neutral-400"><p>마크다운 로딩 중...</p></div>';
     pageControls.classList.add('hidden');
     if (viewPdfBtn && viewMdBtn) {
       viewMdBtn.classList.add('bg-blue-500', 'text-white');
@@ -926,31 +946,14 @@ async function toggleLeftPanelView(mode) {
       viewPdfBtn.classList.remove('bg-blue-500', 'text-white');
       viewPdfBtn.classList.add('bg-neutral-200', 'text-neutral-700');
     }
+    viewerContainer.innerHTML = '<div class="flex items-center justify-center h-full text-neutral-400"><p>마크다운 로딩 중...</p></div>';
 
-    try {
-      const response = await fetch(`/api/read-file?path=${encodeURIComponent(currentOriginalMarkdownPath)}`);
-      const data = await response.json(); // 항상 JSON 파싱 시도
-
-      if (!response.ok) {
-        // 백엔드가 오류 응답 시 data.error에 메시지를 담아 보냄
-        throw new Error(data.error || `서버 오류: ${response.status}`);
-      }
-
-      // response.ok가 true (HTTP 200)인 경우
-      if (data.content !== undefined) {
-        if (typeof marked === 'undefined') {
-          viewerContainer.innerHTML = '<div class="flex items-center justify-center h-full text-red-500"><p>Markdown 라이브러리(marked.js)를 로드할 수 없습니다.</p></div>';
-          return;
-        }
-        const htmlContent = marked.parse(data.content);
+    fetchAndParseMarkdown(currentOriginalMarkdownPath, '/api/read-file')
+      .then(htmlContent => {
         viewerContainer.innerHTML = `<div class="prose max-w-none p-4 overflow-y-auto h-full">${htmlContent}</div>`;
-      } else {
-        // HTTP 200 응답이지만 예상치 못한 content가 없는 경우
-        throw new Error('마크다운 내용을 찾을 수 없습니다 (잘못된 서버 응답).');
-      }
-    } catch (error) { // 네트워크 오류, JSON 파싱 오류, 위에서 throw된 오류 모두 처리
-      console.error('Error loading/parsing markdown:', error);
-      viewerContainer.innerHTML = `<div class="flex items-center justify-center h-full text-red-500"><p>마크다운 표시 오류: ${error.message}</p></div>`;
-    }
+      })
+      .catch(error => {
+        viewerContainer.innerHTML = `<div class="flex items-center justify-center h-full text-red-500"><p>마크다운 표시 오류: ${error.message}</p></div>`;
+      });
   }
 }
