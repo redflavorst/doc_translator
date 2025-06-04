@@ -128,10 +128,26 @@ def translate_chunk(text: str, idx: int | None = None, total: int | None = None)
         'stream': True,      # 스트리밍 활성화
         'system': "/no_think You are a direct translation assistant. Translate the given text from foreign language to Korean immediately without any thinking, reasoning, or explanation. Just provide the translation result only.", # 시스템 프롬프트 유지
         'options': {
-            'temperature': 0.1,    # 기존 온도 설정 유지
-            'enable_thinking': False # '생각 없는' 번역 활성화
-            # 다른 상세 옵션들은 Ollama 기본값을 사용하도록 제거.
-            # 필요시 여기에 'num_gpu', 'num_thread': max(1, (os.cpu_count() or 4) -1) 등 추가 가능
+            'temperature': 0.1,
+            'enable_thinking': False, # '생각 없는' 번역 활성화
+            'top_k': 10,
+            'top_p': 0.3,
+            'repeat_penalty': 1.0,
+            'num_predict': 8000,
+            'stop': ['<think>', '<thinking>', '생각:', '추론:', '분석:', 'Let me think', 'I think', 'reasoning:', 'analysis:'],
+            'num_ctx': 2048,
+            'num_batch': 128,
+            'num_gpu': 0,
+            'num_thread': max(1, cpu_cores - 1),
+            'use_mmap': True,
+            'use_mlock': False,
+            'f16_kv': False,
+            'low_vram': True,
+            'logits_all': False,
+            'vocab_only': False,
+            'embedding_only': False,
+            'penalize_newline': False,
+            'numa': False,
         }
     }
 
@@ -143,46 +159,26 @@ def translate_chunk(text: str, idx: int | None = None, total: int | None = None)
             timeout=300 
         )
         response.raise_for_status()
-
-        translated_parts = []
-        for line in response.iter_lines(decode_unicode=True):
-            if line: 
-                # print(f"[DEBUG] Ollama API raw line: {line}") 
-                try:
-                    chunk_data = json.loads(line)
-                    if "response" in chunk_data:
-                        translated_parts.append(chunk_data["response"])
-                    if chunk_data.get("done"):
-                        if chunk_data.get("total_duration"):
-                            print(f"[INFO] Ollama 스트리밍 완료. 총 소요시간: {chunk_data.get('total_duration')/1e9:.2f}초, 처리 토큰 수: {chunk_data.get('eval_count')}")
-                        else:
-                            print(f"[INFO] Ollama 스트리밍 완료 (세부 정보 없음).")
-                        break # 스트림의 끝을 나타내면 루프 종료
-                except json.JSONDecodeError:
-                    print(f"[ERROR] Ollama 응답라인 JSON 파싱 오류: '{line}'")
-                except Exception as e_parse: 
-                    print(f"[ERROR] Ollama 응답라인 처리 중 오류: '{line}', 오류: {e_parse}")
-        
-        translated = "".join(translated_parts)
-        
-        # 기존의 '생각' 패턴 제거 로직은 예비용으로 유지
-        # print(f"[DEBUG] Translated content before cleaning: '{translated}'") 
-        thinking_patterns = [
-            r'<think>.*?</think>',
-            r'<thinking>.*?</thinking>',
-            r'생각:.*?(?=\n\n|\n[^생각])',
-            r'추론:.*?(?=\n\n|\n[^추론])',
-            r'분석:.*?(?=\n\n|\n[^분석])',
-            r'Let me think.*?(?=\n\n|\n[^L])',
-            r'I think.*?(?=\n\n|\n[^I])',
-            r'reasoning:.*?(?=\n\n|\n[^r])',
-            r'analysis:.*?(?=\n\n|\n[^a])'
-        ]
-        for pattern in thinking_patterns:
-            translated = re.sub(pattern, '', translated, flags=re.DOTALL | re.IGNORECASE)
-        translated = re.sub(r'\n{3,}', '\n\n', translated).strip()
-        # print(f"[DEBUG] Translated content after cleaning: '{translated}'")
-        return translated if translated else "[ERROR] 빈 번역 결과"
+        result = response.json()
+        if 'response' in result:
+            translated = result['response'].strip()
+            thinking_patterns = [
+                r'<think>.*?</think>',
+                r'<thinking>.*?</thinking>',
+                r'생각:.*?(?=\n\n|\n[^생각])',
+                r'추론:.*?(?=\n\n|\n[^추론])',
+                r'분석:.*?(?=\n\n|\n[^분석])',
+                r'Let me think.*?(?=\n\n|\n[^L])',
+                r'I think.*?(?=\n\n|\n[^I])',
+                r'reasoning:.*?(?=\n\n|\n[^r])',
+                r'analysis:.*?(?=\n\n|\n[^a])'
+            ]
+            for pattern in thinking_patterns:
+                translated = re.sub(pattern, '', translated, flags=re.DOTALL | re.IGNORECASE)
+            translated = re.sub(r'\n{3,}', '\n\n', translated).strip()
+            return translated if translated else "[ERROR] 빈 번역 결과"
+        else:
+            return "[ERROR] API 응답에 'response' 키 없음"
     except requests.exceptions.Timeout:
         return "[ERROR] Ollama API 요청 시간 초과 (5분)"
     except requests.exceptions.RequestException as e:

@@ -27,9 +27,31 @@ from tasks import get_translated_file_path # Import the new helper function
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
-# Werkzeug 로거 가져오기 및 INFO 레벨 로그 비활성화 (WARNING, ERROR는 계속 표시)
-log = logging.getLogger('werkzeug')
-log.setLevel(logging.WARNING) # WARNING 레벨 이상만 출력하도록 설정 (INFO 로그는 숨김)
+# 공통 언어 코드 -> 언어 이름 매핑
+LANGUAGE_NAMES: Dict[str, str] = {
+    'ko': 'Korean',
+    'en': 'English',
+    'ja': 'Japanese',
+    'zh-cn': 'Chinese (Simplified)',
+    'zh-tw': 'Chinese (Traditional)',
+    'es': 'Spanish',
+    'fr': 'French',
+    'de': 'German',
+    'ru': 'Russian',
+    'ar': 'Arabic',
+    'pt': 'Portuguese',
+    'it': 'Italian',
+    'vi': 'Vietnamese',
+    'th': 'Thai',
+    'id': 'Indonesian',
+    'hi': 'Hindi',
+}
+
+
+def get_language_name(code: str) -> str:
+    """언어 코드를 사람이 읽을 수 있는 언어명으로 변환합니다."""
+    return LANGUAGE_NAMES.get(code, f'Unknown ({code})')
+
 
 # 서비스 초기화 플래그
 _services_initialized = False
@@ -160,7 +182,7 @@ def scan_directory_for_foreign_docs(directory: Path) -> List[Dict[str, Any]]:
                     'path': str(file_path),
                     'size': file_size,
                     'language': lang,  # 언어 코드 (예: 'ko', 'en', 'ja')
-                    'language_name': lang.upper() if lang else 'Unknown',  # 언어 코드 대문자
+                    'language_name': get_language_name(lang),
                     'confidence': round(confidence * 100, 1) if confidence else 0,  # 백분율로 변환
                     'is_foreign': lang != 'ko' and confidence and confidence >= 0.5  # 한국어가 아닌지 여부
                 }
@@ -486,26 +508,7 @@ def check_language():
         lang, confidence = file_utils.detect_document_language(Path(file_path))
         
         # 언어 코드를 언어명으로 변환
-        language_names = {
-            'ko': 'Korean',
-            'en': 'English',
-            'ja': 'Japanese',
-            'zh-cn': 'Chinese (Simplified)',
-            'zh-tw': 'Chinese (Traditional)',
-            'es': 'Spanish',
-            'fr': 'French',
-            'de': 'German',
-            'ru': 'Russian',
-            'ar': 'Arabic',
-            'pt': 'Portuguese',
-            'it': 'Italian',
-            'vi': 'Vietnamese',
-            'th': 'Thai',
-            'id': 'Indonesian',
-            'hi': 'Hindi'
-        }
-        
-        language_name = language_names.get(lang, f'Unknown ({lang})')
+        language_name = get_language_name(lang)
         
         return jsonify({
             'success': True,
@@ -616,28 +619,10 @@ def select_file():
                 # file_utils의 언어 감지 함수 사용
                 lang, confidence = file_utils.detect_document_language(Path(file_path))
                 
-                # 언어 코드를 언어명으로 변환
-                language_names = {
-                    'ko': 'Korean',
-                    'en': 'English',
-                    'ja': 'Japanese',
-                    'zh-cn': 'Chinese (Simplified)',
-                    'zh-tw': 'Chinese (Traditional)',
-                    'es': 'Spanish',
-                    'fr': 'French',
-                    'de': 'German',
-                    'ru': 'Russian',
-                    'pt': 'Portuguese',
-                    'it': 'Italian',
-                    'vi': 'Vietnamese',
-                    'th': 'Thai',
-                    'id': 'Indonesian',
-                    'hi': 'Hindi'
-                }
-                
+                # 언어 코드와 이름 저장
                 file_info.update({
                     'language': lang,
-                    'language_name': language_names.get(lang, f'Unknown ({lang})'),
+                    'language_name': get_language_name(lang),
                     'confidence': round(confidence * 100, 1)  # 백분율로 변환
                 })
                 
@@ -647,7 +632,7 @@ def select_file():
                     ext = file_path.suffix
                     
                     # 기존에 언어 코드가 이미 붙어있는지 확인하고 제거
-                    for code in language_names.keys():
+                    for code in LANGUAGE_NAMES.keys():
                         if name_without_ext.lower().endswith(f'_{code.lower()}'):
                             name_without_ext = name_without_ext[:-len(f'_{code.upper()}')]
                             break
