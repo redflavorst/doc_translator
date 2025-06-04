@@ -23,7 +23,7 @@ langdetect_available = False
 # 로컬 모듈 임포트
 import file_utils
 import tasks
-from tasks import get_translated_file_path # Import the new helper function
+from tasks import get_translated_file_path, get_original_markdown_path # Import the new helper function
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
@@ -187,28 +187,30 @@ def scan_directory_for_foreign_docs(directory: Path) -> List[Dict[str, Any]]:
                     'is_foreign': lang != 'ko' and confidence and confidence >= 0.5  # 한국어가 아닌지 여부
                 }
                 
+                # 원본 Markdown 경로 추가 로직
+                if file_path.suffix.lower() == '.pdf':
+                    try:
+                        # tasks.py의 get_original_markdown_path 함수를 사용하여 경로를 가져옴
+                        # 이 함수는 원본 입력 파일 경로(PDF)를 받아 data_translated/<stem>/<stem>.md 형태의 경로를 반환
+                        expected_original_md_path = get_original_markdown_path(str(file_path.resolve()))
+                        
+                        if expected_original_md_path.exists():
+                            file_info['original_md_path'] = str(expected_original_md_path.resolve())
+                            logger.debug(f"Found original markdown for {file_path.name} at {expected_original_md_path}")
+                        else:
+                            logger.debug(f"Original markdown not found for {file_path.name} at {expected_original_md_path}. This PDF might not have been processed for translation yet.")
+                    except Exception as e_md_path:
+                        logger.error(f"Error determining original_md_path for {file_path.name} using tasks.get_original_markdown_path: {e_md_path}")
+                
                 all_docs.append(file_info)
                 logger.info(f"문서 처리 완료: {file_path} -> {lang} (신뢰도: {confidence or 0:.2f}, 외국어: {file_info['is_foreign']})")
                 
                 # 처리된 파일로 표시
                 processed_files.add(str(file_path))
                     
-            except Exception as detect_error:
-                logger.error(f"문서 처리 중 오류 발생 ({file_path}): {detect_error}", exc_info=True)
-                
-                # 오류 발생 시 기본 정보만 포함
-                file_info = {
-                    'name': file_path.name,
-                    'display_name': file_path.name,
-                    'path': str(file_path),
-                    'size': file_size,
-                    'language': 'unknown',
-                    'language_name': 'Unknown',
-                    'confidence': 0,
-                    'is_foreign': False,
-                    'error': str(detect_error)
-                }
-                all_docs.append(file_info)
+            except Exception as e:
+                logger.error(f"Error processing file {file_path}: {e}")
+                continue # 다음 파일 처리를 계속합니다.
                 
         except Exception as e:
             logger.error(f"파일 처리 중 오류 발생 ({file_path}): {e}", exc_info=True)
@@ -888,24 +890,54 @@ def read_file():
     import os
     from pathlib import Path
     
-    file_path = request.args.get('path')
-    if not file_path or not os.path.exists(file_path):
-        return jsonify({'error': '파일을 찾을 수 없습니다.'}), 404
+    file_path_str = request.args.get('path')
+    logger.info(f"/api/read-file called with path: {file_path_str}")
+
+    if not file_path_str:
+        logger.error("File path not provided.")
+        return jsonify({'error': '파일 경로가 제공되지 않았습니다.'}), 400
     
+    # 경로 정규화 및 절대 경로 변환 (보안 및 일관성 강화)
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
+        abs_file_path = Path(file_path_str).resolve(strict=True)
+    except FileNotFoundError:
+        logger.error(f"File not found at resolved path: {file_path_str}")
+        return jsonify({'error': '파일을 찾을 수 없습니다 (경로 확인 실패).'}), 404
+    except Exception as e_resolve:
+        logger.error(f"Error resolving path {file_path_str}: {e_resolve}")
+        return jsonify({'error': f'잘못된 파일 경로입니다: {e_resolve}'}), 400
+
+    # 실제 파일 시스템에 파일이 존재하는지 한 번 더 확인
+    if not abs_file_path.is_file():
+        logger.error(f"Path is not a file or does not exist: {abs_file_path}")
+        return jsonify({'error': '파일을 찾을 수 없거나 디렉토리입니다.'}), 404
+
+    logger.info(f"Attempting to read file: {abs_file_path}")
+    content = None
+    try:
+        with open(abs_file_path, 'r', encoding='utf-8') as f:
             content = f.read()
+        logger.info(f"Successfully read file {abs_file_path} with UTF-8. Content length: {len(content)}")
         return jsonify({'content': content})
-    except UnicodeDecodeError:
+    except UnicodeDecodeError as ude:
+        logger.warning(f"UTF-8 decoding failed for {abs_file_path}: {ude}. Trying CP949.")
         try:
-            # UTF-8 실패 시 다른 인코딩 시도
-            with open(file_path, 'r', encoding='cp949') as f:
+            with open(abs_file_path, 'r', encoding='cp949') as f:
                 content = f.read()
+            logger.info(f"Successfully read file {abs_file_path} with CP949. Content length: {len(content)}")
             return jsonify({'content': content})
-        except Exception as e:
-            return jsonify({'error': f'파일을 읽는 중 오류가 발생했습니다: {str(e)}'}), 500
-    except Exception as e:
-        return jsonify({'error': f'파일을 읽는 중 오류가 발생했습니다: {str(e)}'}), 500
+        except UnicodeDecodeError as ude2:
+            logger.error(f"CP949 decoding also failed for {abs_file_path}: {ude2}. No further fallbacks.")
+            return jsonify({'error': f'파일 인코딩을 인식할 수 없습니다 (UTF-8, CP949 시도 실패): {str(ude2)}'}), 500
+        except Exception as e_cp949:
+            logger.error(f"Error reading file {abs_file_path} with CP949: {e_cp949}")
+            return jsonify({'error': f'파일을 CP949로 읽는 중 오류 발생: {str(e_cp949)}'}), 500
+    except FileNotFoundError:
+        logger.error(f"File not found during open operation (should have been caught earlier): {abs_file_path}")
+        return jsonify({'error': '파일을 찾을 수 없습니다 (읽기 시도 중).' }), 404
+    except Exception as e_utf8:
+        logger.error(f"Error reading file {abs_file_path} with UTF-8 (other than UnicodeDecodeError): {e_utf8}")
+        return jsonify({'error': f'파일을 UTF-8로 읽는 중 오류 발생: {str(e_utf8)}'}), 500
 
 
 @app.route('/api/download')

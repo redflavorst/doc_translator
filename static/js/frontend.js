@@ -3,6 +3,8 @@ let currentFile = null;
 let currentPage = 1;
 let totalPages = 1;
 let translationStatusInterval = null;  // 번역 상태 체크를 위한 인터벌 ID
+let currentOriginalMarkdownPath = null; // 원본 마크다운 파일 경로
+let leftPanelViewMode = 'pdf'; // 좌측 패널 보기 모드: 'pdf' 또는 'md'
 
 // 언어 코드를 국기 이모지로 변환하는 함수
 function getLanguageFlag(languageCode) {
@@ -158,10 +160,12 @@ async function selectFolder(folderPath) {
           fileList.appendChild(li);
           
           // 파일 클릭 시 로드
-          fileName.onclick = () => {
+          fileName.onclick = async () => {
             const filePath = file.path || file;
-            console.log('파일 클릭:', filePath);
-            loadFile(filePath);
+            console.log('파일 클릭:', filePath, '원본 MD 경로:', file.original_md_path);
+            const fileType = file.type || 'pdf'; // 기본값은 PDF
+            const originalMdPath = file.original_md_path || null;
+            loadFile(filePath, fileType, originalMdPath);
           };
         });
         
@@ -204,12 +208,33 @@ async function selectFolder(folderPath) {
 }
 
 // 파일 로드 함수
-function loadFile(filePath) {
-  console.log('파일 로드:', filePath);
-  const ext = filePath.split('.').pop().toLowerCase();
+async function loadFile(filePath, fileType, originalMdPath) {
+  console.log('파일 로드:', filePath, '타입:', fileType);
+  // Reset markdown path and disable button first
+  currentOriginalMarkdownPath = null;
+  const viewMdBtn = document.getElementById('view-md-btn');
+  if (viewMdBtn) {
+    viewMdBtn.disabled = true;
+    viewMdBtn.classList.remove('bg-blue-500', 'text-white');
+    viewMdBtn.classList.add('bg-neutral-200', 'text-neutral-700');
+  }
+  document.getElementById('view-pdf-btn').classList.add('bg-blue-500', 'text-white');
+  document.getElementById('view-pdf-btn').classList.remove('bg-neutral-200', 'text-neutral-700');
+  leftPanelViewMode = 'pdf'; // Reset to PDF view by default
+  currentOriginalMarkdownPath = originalMdPath; // 전달받은 원본 MD 경로 설정
 
-  // Update left panel
-  if (ext === 'pdf') {
+  if (viewMdBtn) {
+      viewMdBtn.disabled = !currentOriginalMarkdownPath;
+      if (currentOriginalMarkdownPath) {
+        viewMdBtn.classList.remove('bg-neutral-200', 'text-neutral-700');
+        // viewMdBtn.classList.add('bg-blue-500', 'text-white'); // 활성화 시 스타일은 토글 함수에서 관리
+      } else {
+        viewMdBtn.classList.remove('bg-blue-500', 'text-white');
+        viewMdBtn.classList.add('bg-neutral-200', 'text-neutral-700');
+      }
+  }
+
+  if (fileType === 'pdf' || filePath.toLowerCase().endsWith('.pdf')) {
     loadPDFView(filePath, 1);
   } else {
     loadDocumentView(filePath);
@@ -219,8 +244,37 @@ function loadFile(filePath) {
   displayTranslatedContentOrPlaceholder(filePath);
 }
 
-// PDF 로드
-function loadPDFView(filePath, page = 1) {
+// PDF 로드 및 좌측 패널 보기 모드 관리
+async function loadPDFView(filePath, page = 1) {
+  console.log(`[VIEWER] PDF 로드 요청: ${filePath}, 페이지: ${page}`);
+  currentFile = filePath;
+  currentPage = page;
+  leftPanelViewMode = 'pdf';
+
+  const viewerContainer = document.getElementById('viewer-container');
+  const pageControls = document.getElementById('page-controls');
+  const pageInfo = document.getElementById('page-info');
+  const viewPdfBtn = document.getElementById('view-pdf-btn');
+  const viewMdBtn = document.getElementById('view-md-btn');
+
+  viewerContainer.innerHTML = '<div class="flex items-center justify-center h-full text-neutral-400"><p>PDF 로딩 중...</p></div>';
+  pageControls.classList.remove('hidden');
+  pageInfo.textContent = '';
+
+  // Update button styles
+  if (viewPdfBtn && viewMdBtn) {
+    viewPdfBtn.classList.add('bg-blue-500', 'text-white');
+    viewPdfBtn.classList.remove('bg-neutral-200', 'text-neutral-700');
+    viewMdBtn.classList.remove('bg-blue-500', 'text-white');
+    viewMdBtn.classList.add('bg-neutral-200', 'text-neutral-700');
+  }
+
+  // Clear right panel when loading a new PDF
+  const rightPanel = document.getElementById('right-panel');
+  if (rightPanel) {
+      rightPanel.innerHTML = '<div class="text-neutral-500 text-center py-8">번역된 내용이 여기에 표시됩니다.</div>';
+  }
+
   const viewer = document.getElementById('viewer-container');
   if (!viewer) return;
 
@@ -233,8 +287,6 @@ function loadPDFView(filePath, page = 1) {
   .then(data => {
     if (data.image) {
       viewer.innerHTML = `<img src="data:image/png;base64,${data.image}" style="max-width: 100%;">`;
-      currentFile = filePath;
-      currentPage = page;
       totalPages = data.total_pages || 1;
       
       updatePageControls();
@@ -248,8 +300,8 @@ function loadPDFView(filePath, page = 1) {
   });
 }
 
-// 문서 로드 (텍스트 파일 등)
-function loadDocumentView(filePath) {
+// 문서 로드 (텍스트 파일 등) - 현재는 PDF/MD 외 다른 문서 타입은 이 함수를 직접 호출하지 않음
+async function loadDocumentView(filePath) {
   const viewer = document.getElementById('viewer-container');
   if (!viewer) return;
 
@@ -709,7 +761,7 @@ function displayTranslatedContentOrPlaceholder(filePath) {
 
 // 번역 결과 표시
 function showTranslationResult(filePath) {
-  console.log('[FRONTEND] 번역 결과 표시:', filePath);
+  console.log('[FRONTEND] 번역 결과 표시 요청:', filePath);
   
   fetch(`/api/translation-result?path=${encodeURIComponent(filePath)}`)
     .then(res => {
@@ -719,33 +771,45 @@ function showTranslationResult(filePath) {
       return res.json();
     })
     .then(data => {
-      console.log('[FRONTEND] 번역 결과 수신:', data);
+      console.log('[FRONTEND] 서버로부터 받은 번역 결과 데이터:', data);
       const rightPanel = document.getElementById('right-panel');
       
       if (data.content) {
+        // Ensure marked is available
+        if (typeof marked === 'undefined') {
+          rightPanel.innerHTML = `<div class="p-4 text-red-500">Markdown 라이브러리(marked.js)를 로드할 수 없습니다.</div>`;
+          console.error('[FRONTEND] marked.js 라이브러리를 찾을 수 없습니다.');
+          return;
+        }
+
+        console.log('[FRONTEND] marked.parse에 전달될 원본 번역 내용 (data.content):', data.content); // 로그 추가
+        const translatedHtmlContent = marked.parse(data.content);
+        console.log('[FRONTEND] marked.parse 후 변환된 HTML 내용 (translatedHtmlContent):', translatedHtmlContent); // 로그 추가
+
         rightPanel.innerHTML = `
-          <div class="p-4">
-            <div class="flex items-center justify-between mb-4">
+          <div class="p-4 flex flex-col h-full">
+            <div class="flex items-center justify-between mb-4 flex-shrink-0">
               <h3 class="text-lg font-semibold">번역 결과</h3>
               <a href="/api/download?path=${encodeURIComponent(filePath)}" 
                  class="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600">
                 다운로드
               </a>
             </div>
-            <div class="bg-white p-4 rounded border max-h-[500px] overflow-y-auto">
-              <pre class="whitespace-pre-wrap text-sm">${data.content}</pre>
+            <div class="prose max-w-none h-full overflow-y-auto bg-white p-4 rounded border flex-grow">
+              ${translatedHtmlContent}
             </div>
-            <div class="mt-4 text-sm text-gray-500">
+            <div class="mt-4 text-sm text-gray-500 flex-shrink-0">
               <p>번역이 완료되었습니다. 위의 다운로드 버튼을 클릭하여 파일을 저장하세요.</p>
             </div>
           </div>
         `;
       } else {
+        console.warn('[FRONTEND] 번역된 내용(data.content)이 없습니다.');
         throw new Error('번역된 내용이 없습니다.');
       }
     })
     .catch(error => {
-      console.error('[FRONTEND] 번역 결과 로드 오류:', error);
+      console.error('[FRONTEND] 번역 결과 로드 또는 처리 중 오류:', error);
       const rightPanel = document.getElementById('right-panel');
       if (rightPanel) {
         rightPanel.innerHTML = `
@@ -795,6 +859,21 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+
+  // 좌측 패널 보기 모드 전환 버튼 이벤트 리스너
+  const viewPdfBtn = document.getElementById('view-pdf-btn');
+  if (viewPdfBtn) {
+    viewPdfBtn.addEventListener('click', () => {
+      if (currentFile) toggleLeftPanelView('pdf');
+    });
+  }
+
+  const viewMdBtn = document.getElementById('view-md-btn');
+  if (viewMdBtn) {
+    viewMdBtn.addEventListener('click', () => {
+      if (currentFile && currentOriginalMarkdownPath) toggleLeftPanelView('md');
+    });
+  }
   
   // API 준비 확인
   let attempts = 0;
@@ -809,3 +888,69 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }, 100);
 });
+
+// 좌측 패널 보기 모드 전환 함수
+async function toggleLeftPanelView(mode) {
+  if (!currentFile) return;
+  leftPanelViewMode = mode;
+
+  const viewerContainer = document.getElementById('viewer-container');
+  const pageControls = document.getElementById('page-controls');
+  const viewPdfBtn = document.getElementById('view-pdf-btn');
+  const viewMdBtn = document.getElementById('view-md-btn');
+
+  if (mode === 'pdf') {
+    console.log('[VIEWER] PDF 보기 모드로 전환');
+    pageControls.classList.remove('hidden');
+    if (viewPdfBtn && viewMdBtn) {
+      viewPdfBtn.classList.add('bg-blue-500', 'text-white');
+      viewPdfBtn.classList.remove('bg-neutral-200', 'text-neutral-700');
+      viewMdBtn.classList.remove('bg-blue-500', 'text-white');
+      viewMdBtn.classList.add('bg-neutral-200', 'text-neutral-700');
+    }
+    // loadPDFView를 직접 호출하기보다, 현재 페이지로 다시 로드하는 것이 안전할 수 있음
+    // 여기서는 이미 loadPDFView가 currentFile, currentPage를 사용하므로, 해당 상태로 다시 그림
+    loadPDFView(currentFile, currentPage);
+  } else if (mode === 'md') {
+    console.log('[VIEWER] 원본 MD 보기 모드로 전환');
+    if (!currentOriginalMarkdownPath) {
+      viewerContainer.innerHTML = '<div class="flex items-center justify-center h-full text-red-500"><p>원본 마크다운 파일 경로가 없습니다.</p></div>';
+      pageControls.classList.add('hidden');
+      return;
+    }
+    viewerContainer.innerHTML = '<div class="flex items-center justify-center h-full text-neutral-400"><p>마크다운 로딩 중...</p></div>';
+    pageControls.classList.add('hidden');
+    if (viewPdfBtn && viewMdBtn) {
+      viewMdBtn.classList.add('bg-blue-500', 'text-white');
+      viewMdBtn.classList.remove('bg-neutral-200', 'text-neutral-700');
+      viewPdfBtn.classList.remove('bg-blue-500', 'text-white');
+      viewPdfBtn.classList.add('bg-neutral-200', 'text-neutral-700');
+    }
+
+    try {
+      const response = await fetch(`/api/read-file?path=${encodeURIComponent(currentOriginalMarkdownPath)}`);
+      const data = await response.json(); // 항상 JSON 파싱 시도
+
+      if (!response.ok) {
+        // 백엔드가 오류 응답 시 data.error에 메시지를 담아 보냄
+        throw new Error(data.error || `서버 오류: ${response.status}`);
+      }
+
+      // response.ok가 true (HTTP 200)인 경우
+      if (data.content !== undefined) {
+        if (typeof marked === 'undefined') {
+          viewerContainer.innerHTML = '<div class="flex items-center justify-center h-full text-red-500"><p>Markdown 라이브러리(marked.js)를 로드할 수 없습니다.</p></div>';
+          return;
+        }
+        const htmlContent = marked.parse(data.content);
+        viewerContainer.innerHTML = `<div class="prose max-w-none p-4 overflow-y-auto h-full">${htmlContent}</div>`;
+      } else {
+        // HTTP 200 응답이지만 예상치 못한 content가 없는 경우
+        throw new Error('마크다운 내용을 찾을 수 없습니다 (잘못된 서버 응답).');
+      }
+    } catch (error) { // 네트워크 오류, JSON 파싱 오류, 위에서 throw된 오류 모두 처리
+      console.error('Error loading/parsing markdown:', error);
+      viewerContainer.innerHTML = `<div class="flex items-center justify-center h-full text-red-500"><p>마크다운 표시 오류: ${error.message}</p></div>`;
+    }
+  }
+}
