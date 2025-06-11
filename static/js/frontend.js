@@ -966,6 +966,9 @@ async function toggleLeftPanelView(mode) {
     // loadPDFView를 직접 호출하기보다, 현재 페이지로 다시 로드하는 것이 안전할 수 있음
     // 여기서는 이미 loadPDFView가 currentFile, currentPage를 사용하므로, 해당 상태로 다시 그림
     loadPDFView(currentFile, currentPage);
+
+    // PDF 보기로 돌아올 때 우측 패널의 번역본도 다시 로드
+    displayTranslatedContentOrPlaceholder(currentFile);
   } else if (mode === "md") {
     console.log("[VIEWER] 원본 MD 보기 모드로 전환");
     if (!currentOriginalMarkdownPath) {
