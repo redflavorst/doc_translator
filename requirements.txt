@@ -15,6 +15,12 @@ langdetect>=1.0.9  # 문서 언어 감지
 # 이미지 처리
 Pillow>=9.0.0  # 이미지 조작 (pdf2image 의존성)
 
+# HTML/Markdown 처리
+beautifulsoup4>=4.9.3
+markdown>=3.3.4
+markdownify>=0.11.1
+chardet>=4.0.0
+
 # HTTP 요청
 requests>=2.28.0  # API 호출용
 

@@ -44,19 +44,22 @@
       overflow-y: auto;
     }
     #sidebarToggle {
-      position: absolute;
-      right: -12px;
-      top: 10px;
-      background: white;
-      border-radius: 50%;
-      width: 24px;
-      height: 24px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-      z-index: 10;
-    }
+  position: absolute;
+  top: 10px;
+  left: 6px; /* 기본 위치를 6px로 설정 */
+  background: white;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  z-index: 10;
+  transition: left 0.3s ease;
+  border: 1px solid #e5e7eb;
+  cursor: pointer;
+}
     
     /* 로컬 아이콘 스타일 추가 */
     .local-icon {
@@ -106,14 +109,24 @@
     }
     
     /* 사이드바 리사이저 스타일 추가 */
-    .sidebar-resizer {
-      width: 4px;
-      background: #e5e7eb;
-      cursor: ew-resize;
-      position: relative;
-      transition: background-color 0.2s;
-      flex-shrink: 0;
-    }
+#sidebar.hidden {
+  display: none !important;
+  width: 0px !important;
+}
+
+.sidebar-resizer {
+  width: 4px;
+  background: #e5e7eb;
+  cursor: ew-resize;
+  position: relative;
+  transition: background-color 0.2s;
+  flex-shrink: 0;
+}
+
+/* 사이드바가 숨겨졌을 때 리사이저도 숨기기 */
+#sidebar.hidden + .sidebar-resizer {
+  display: none !important;
+}
     
     .sidebar-resizer:hover {
       background: #3b82f6;
@@ -126,6 +139,8 @@
     .resizing * {
       cursor: ew-resize !important;
     }
+
+
     
     /* 이모지 폰트 스타일 */
     .emoji-font {
@@ -288,91 +303,100 @@
   <script src="/static/js/frontend.js"></script>
   <script>
     const sidebar = document.getElementById('sidebar');
-    const sidebarToggle = document.getElementById('sidebarToggle');
-    const sidebarResizer = document.getElementById('sidebarResizer');
-    
-    let isResizing = false;
-    let startX = 0;
-    let startWidth = 0;
-    
-    // 기존 토글 함수 개선
-    function toggleSidebar() {
-      const currentWidth = sidebar.style.width;
-      const isHidden = currentWidth === '0px';
-      const icon = sidebarToggle.querySelector('.local-icon');
-      
-      if (isHidden) {
-        sidebar.style.width = '256px';
-        sidebar.style.visibility = 'visible';
-        icon.className = 'local-icon chevron-left';
-        sidebarToggle.style.left = '256px';
-      } else {
-        sidebar.style.width = '0px';
-        sidebar.style.visibility = 'hidden';
-        icon.className = 'local-icon chevron-right';
-        sidebarToggle.style.left = '0px';
-      }
-    }
+const sidebarToggle = document.getElementById('sidebarToggle');
+const sidebarResizer = document.getElementById('sidebarResizer');
 
-    // 리사이저 기능 최적화
-    function startResize(e) {
-      isResizing = true;
-      startX = e.clientX;
-      startWidth = parseInt(sidebar.style.width || '256', 10);
-      document.body.classList.add('resizing');
-      
-      // 리사이징 중 transition 비활성화
-      sidebar.style.transition = 'none';
-      
-      document.addEventListener('mousemove', doResize);
-      document.addEventListener('mouseup', stopResize);
-      e.preventDefault();
-    }
-    
-    function doResize(e) {
-      if (!isResizing) return;
-      
-      const deltaX = e.clientX - startX;
-      const newWidth = startWidth + deltaX;
-      
-      const minWidth = 200;
-      const maxWidth = 600;
-      
-      if (newWidth >= minWidth && newWidth <= maxWidth) {
-        sidebar.style.width = newWidth + 'px';
-        // 토글 버튼 위치 업데이트
-        sidebarToggle.style.left = newWidth + 'px';
-      }
-    }
-    
-    function stopResize() {
-      isResizing = false;
-      document.body.classList.remove('resizing');
-      
-      // transition 다시 활성화 (토글용)
-      sidebar.style.transition = 'width 0.3s ease-in-out, visibility 0.3s ease-in-out';
-      
-      document.removeEventListener('mousemove', doResize);
-      document.removeEventListener('mouseup', stopResize);
-    }
+let isResizing = false;
+let startX = 0;
+let startWidth = 0;
 
-    // 이벤트 리스너
-    if (sidebarToggle) {
-      sidebarToggle.addEventListener('click', toggleSidebar);
-    }
-    
-    if (sidebarResizer) {
-      sidebarResizer.addEventListener('mousedown', startResize);
-    }
-    
-    // 초기 상태 설정
-    document.addEventListener('DOMContentLoaded', function() {
-      sidebar.style.width = '256px';
-      sidebar.style.visibility = 'visible';
-      sidebar.style.transition = 'width 0.3s ease-in-out, visibility 0.3s ease-in-out';
-      sidebarToggle.style.left = '256px';
-      sidebarToggle.querySelector('.local-icon').className = 'local-icon chevron-left';
-    });
+// 토글 함수 완전 수정
+// 토글 함수 수정
+function toggleSidebar() {
+  const isCurrentlyHidden = sidebar.style.width === '0px' || sidebar.classList.contains('hidden');
+  const icon = sidebarToggle.querySelector('.local-icon');
+  
+  if (isCurrentlyHidden) {
+    // 사이드바 보이기
+    sidebar.style.width = '256px';
+    sidebar.style.visibility = 'visible';
+    sidebar.style.display = 'block';
+    sidebar.classList.remove('hidden');
+    sidebarResizer.style.display = 'block';
+    icon.className = 'local-icon chevron-left';
+    sidebarToggle.style.left = '244px'; // 256px - 12px
+  } else {
+    // 사이드바 완전히 숨기기
+    sidebar.style.width = '0px';
+    sidebar.style.visibility = 'hidden';
+    sidebar.style.display = 'none';
+    sidebar.classList.add('hidden');
+    sidebarResizer.style.display = 'none';
+    icon.className = 'local-icon chevron-right';
+    sidebarToggle.style.left = '6px'; // 화면 안쪽으로 6px 위치
+  }
+}
+
+// 리사이저 기능
+function startResize(e) {
+  // 사이드바가 숨겨진 상태에서는 리사이징 불가
+  if (sidebar.classList.contains('hidden')) return;
+  
+  isResizing = true;
+  startX = e.clientX;
+  startWidth = parseInt(sidebar.style.width || '256', 10);
+  document.body.classList.add('resizing');
+  
+  sidebar.style.transition = 'none';
+  
+  document.addEventListener('mousemove', doResize);
+  document.addEventListener('mouseup', stopResize);
+  e.preventDefault();
+}
+
+function doResize(e) {
+  if (!isResizing) return;
+  
+  const deltaX = e.clientX - startX;
+  const newWidth = startWidth + deltaX;
+  
+  const minWidth = 200;
+  const maxWidth = 600;
+  
+  if (newWidth >= minWidth && newWidth <= maxWidth) {
+    sidebar.style.width = newWidth + 'px';
+    sidebarToggle.style.left = (newWidth - 12) + 'px';
+  }
+}
+
+function stopResize() {
+  isResizing = false;
+  document.body.classList.remove('resizing');
+  
+  sidebar.style.transition = 'width 0.3s ease-in-out, visibility 0.3s ease-in-out';
+  
+  document.removeEventListener('mousemove', doResize);
+  document.removeEventListener('mouseup', stopResize);
+}
+
+// 이벤트 리스너
+if (sidebarToggle) {
+  sidebarToggle.addEventListener('click', toggleSidebar);
+}
+
+if (sidebarResizer) {
+  sidebarResizer.addEventListener('mousedown', startResize);
+}
+
+// 초기 상태 설정
+document.addEventListener('DOMContentLoaded', function() {
+  sidebar.style.width = '256px';
+  sidebar.style.visibility = 'visible';
+  sidebar.style.display = 'block';
+  sidebar.style.transition = 'width 0.3s ease-in-out, visibility 0.3s ease-in-out';
+  sidebarToggle.style.left = '244px'; // 256px - 12px
+  sidebarToggle.querySelector('.local-icon').className = 'local-icon chevron-left';
+});
   </script>
 </body>
 </html>
