@@ -53,6 +53,9 @@ output/
 *.jpeg
 *.gif
 
+# models 폴더 하위 모든 파일과 폴더 ignore
+models/*
+
 # OS generated files
 .DS_Store
 .DS_Store?
