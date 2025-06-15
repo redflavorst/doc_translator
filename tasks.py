@@ -75,7 +75,16 @@ def run_translation(path: str):
         # 3. Translate the Markdown content
         # translate_markdown should take the actual markdown string and return translated markdown string.
         # The 'path' argument is passed to translate_markdown for progress tracking within the translator.
-        translated_markdown_content = translate_markdown(markdown_content_for_translation, path)
+        
+        # 적응형 하이브리드 번역 모드 사용 (품질과 속도 균형)
+        USE_ADAPTIVE_MODE = True  # True: 적응형 하이브리드, False: 문장별 고품질 모드
+        
+        if USE_ADAPTIVE_MODE:
+            logger.info("적응형 하이브리드 번역 모드 사용 (문서 특성에 따라 자동 최적화)")
+            translated_markdown_content = translate_markdown(markdown_content_for_translation, path)
+        else:
+            logger.info("문장별 고품질 번역 모드 사용")
+            translated_markdown_content = translate_markdown(markdown_content_for_translation, path, use_sentence_mode=True)
 
         # 4. Save translated Markdown
         translated_md_path = current_file_output_dir / (file_stem + '_translated.md')
