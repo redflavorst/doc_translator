@@ -6,6 +6,7 @@ pywebview>=4.0.0  # GUI 애플리케이션용
 pdf2image>=1.16.0  # PDF를 이미지로 변환
 PyPDF2>=3.0.0  # PDF 텍스트 추출
 PyMuPDF>=1.21.0  # 향상된 PDF 텍스트 추출
+pymupdf4llm>=0.1.0  # PDF→Markdown 변환용
 
 docling>=0.1.0  # 문서 변환 (PDF 처리용)
 
