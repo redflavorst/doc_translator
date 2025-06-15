@@ -439,45 +439,44 @@ def detect_document_language(file_path: Path, sample_size: int = 5000) -> Tuple[
         return 'en', 0.0
 
 def convert_pdf_to_markdown(pdf_path: Path, use_ocr: bool = False) -> str:
-    """
-    PDF 파일을 마크다운(.md) 파일로 변환하여 저장합니다.
-    
-    이 함수는 PDF 파일을 마크다운 형식으로 변환합니다. 
-    OCR을 사용하여 이미지 기반 PDF도 처리할 수 있습니다.
-    
+    """PDF 파일을 Markdown 문자열로 변환합니다.
+
+    pymupdf4llm이 설치되어 있으면 해당 라이브러리를 사용하여 간단히 변환하고,
+    그렇지 않은 경우 기존 docling 방식을 사용합니다.
+
     Args:
-        pdf_path (Path): 변환할 PDF 파일 경로
-        use_ocr (bool, optional): 이미지 기반 PDF의 경우 OCR 사용 여부. 
-                                기본값은 False입니다.
-                                
+        pdf_path: 변환할 PDF 파일 경로
+        use_ocr: docling 백업 방식을 사용할 때 OCR 적용 여부
+
     Returns:
-        str: 변환된 마크다운 콘텐츠
-        
-    Raises:
-        FileNotFoundError: PDF 파일을 찾을 수 없는 경우
-        RuntimeError: 변환 과정에서 오류가 발생한 경우
-        
-    Examples:
-        >>> markdown_content = convert_pdf_to_markdown(Path("document.pdf"))
-        >>> # markdown_content는 이제 문자열입니다.
-        
-        >>> markdown_content_ocr = convert_pdf_to_markdown(Path("scanned.pdf"), use_ocr=True)
-        >>> # markdown_content_ocr는 이제 문자열입니다.
+        변환된 Markdown 문자열
     """
     # 1. 입력 유효성 검사
     pdf_path = Path(pdf_path).resolve()
     if not pdf_path.exists() or not pdf_path.is_file():
         raise FileNotFoundError(f"PDF 파일을 찾을 수 없습니다: {pdf_path}")
     
-    # 2. docling 모듈 로드 확인
+    # 2. 먼저 pymupdf4llm 사용 시도
+    try:
+        import pymupdf4llm
+        logger.info("pymupdf4llm으로 PDF → Markdown 변환 시도")
+        return pymupdf4llm.to_markdown(str(pdf_path))
+    except ImportError:
+        logger.info("pymupdf4llm이 설치되지 않아 docling으로 변환을 시도합니다")
+    except Exception as e:
+        logger.warning(f"pymupdf4llm 변환 실패: {e}. docling으로 대체 시도")
+
+    # 3. docling 모듈 로드 확인
     if not docling_imported:
-        raise ImportError("PDF 변환을 위해서는 docling 패키지가 필요합니다. 'pip install docling'으로 설치해주세요.")
+        raise ImportError(
+            "PDF 변환을 위해 pymupdf4llm 또는 docling 패키지가 필요합니다. 'pip install pymupdf4llm docling'으로 설치해주세요."
+        )
     
     logger.info(f"PDF → Markdown 변환 시작: {pdf_path}")
     logger.info(f"OCR 사용: {'예' if use_ocr else '아니오'}")
     
     try:
-        # 5. PDF 파이프라인 옵션 설정
+        # 4. PDF 파이프라인 옵션 설정
         from docling.document_converter import DocumentConverter, PdfFormatOption
         from docling.datamodel.base_models import InputFormat
         from docling.datamodel.pipeline_options import PdfPipelineOptions, TesseractCliOcrOptions
