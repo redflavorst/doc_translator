@@ -1,8 +1,8 @@
 from pathlib import Path
 import logging
 
-from file_utils import convert_pdf_to_markdown # Assuming this returns Path to converted .md
-from translator import translate_markdown # Assuming this takes MD string, returns translated MD string
+from file_utils import convert_pdf_to_markdown  # PDF를 Markdown 문자열로 변환
+from argos_translator import translate_markdown  # Markdown 문자열을 번역
 from progress_manager import progress_manager
 
 logger = logging.getLogger(__name__)

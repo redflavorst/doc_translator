@@ -32,6 +32,7 @@ PyYAML>=6.0.0  # 설정 파일 처리
 transformers>=4.0.0
 torch>=1.8.0  # Specify a version or range as needed
 tqdm>=4.60.0 # For progress bars
+argostranslate>=1.8.0
 
 # 의존성 주의:
 # 1. pdf2image 사용을 위해 poppler 설치 필요 (Windows: https://github.com/oschwartz10612/poppler-windows/releases/)
