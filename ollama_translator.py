@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import List, Tuple
 from progress_manager import progress_manager
 from argos_translator import MarkdownTranslator, TranslationUnit
+import yaml
 
 
 class SupportedLanguage(Enum):
@@ -80,8 +81,31 @@ class MultilingualTranslator:
         self.config = config
         self.preserver = MarkdownPreserver()
         self.client = None
+        self.prompt_template = self._load_prompt_template()
         if config.provider == LLMProvider.OLLAMA:
             self._init_ollama()
+
+    def _load_prompt_template(self) -> str:
+        """YAML 프롬프트 파일을 읽어 설명과 템플릿을 합친다."""
+        base_dir = Path(__file__).resolve().parent
+        prompt_path = base_dir / 'prompts' / 'tax_translation_prompt.yaml'
+        if prompt_path.exists():
+            try:
+                with open(prompt_path, 'r', encoding='utf-8') as f:
+                    data = yaml.safe_load(f)
+                para = data.get('paragraph_translation', {})
+                desc = para.get('description', '').strip()
+                template = para.get('template', '').strip()
+                merged = f"{desc}\n{template}".strip()
+                if merged:
+                    return merged
+            except Exception:
+                pass
+        # fallback basic template
+        return (
+            "다음 {source} 텍스트를 한국어로 번역하세요.\n\n"
+            "원문: {text}\n\n번역:"
+        )
 
     def _init_ollama(self) -> None:
         try:
@@ -91,9 +115,15 @@ class MultilingualTranslator:
             raise RuntimeError("ollama 패키지가 필요합니다") from e
 
     def _prompt(self, text: str, source: str) -> str:
+        template = self.prompt_template
+        if "{{source_paragraph}}" in template:
+            template = template.replace("{{source_paragraph}}", text)
+        if "{{source_sentence}}" in template:
+            template = template.replace("{{source_sentence}}", text)
         return (
-            f"다음 {source} 텍스트를 한국어로 번역하세요.\n\n"
-            f"원문: {text}\n\n번역:"
+            template
+            .replace("{source}", source)
+            .replace("{text}", text)
         )
 
     def translate_unit(self, text: str, source_lang: str) -> str:
@@ -112,10 +142,10 @@ class MultilingualTranslator:
         translated = self.preserver.restore(result, elements)
         return translated
 
-    def translate_markdown(self, markdown: str, source_lang: str, path: str = None) -> str:
-        # Argos 방식과 동일하게 units 분할
+    def translate_markdown(self, markdown: str, source_lang: str, path: str = None, split_by_sentence: bool = False) -> str:
+        """Translate Markdown text using the same preprocessing as Argos."""
         translator = MarkdownTranslator(source_lang, "ko")
-        units = translator.split_into_units(markdown)
+        units = translator.split_into_units(markdown, split_by_sentence)
         results: List[str] = []
         total_chunks = len(units)
         # 각 청크 정보 구성 (chunk index, type, size, status)
