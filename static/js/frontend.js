@@ -158,6 +158,9 @@ async function selectFolder(folderPath) {
           checkbox.value = file.path || file;
           checkbox.className = "mr-3";
 
+          // 체크박스 상태 변경 시 번역 버튼 상태 업데이트
+          checkbox.addEventListener("change", updateTranslateButtonState);
+
           const fileName = document.createElement("span");
           // 국기 이모지가 포함된 파일명 사용
           const displayName = addFlagToFileName(
@@ -226,6 +229,25 @@ async function selectFolder(folderPath) {
           </button>
         </div>
       `;
+    }
+  }
+
+  // 파일 리스트 렌더링 후 번역 버튼 상태 초기화
+  setTimeout(updateTranslateButtonState, 0);
+}
+
+// 번역 버튼 활성화/비활성화 유틸 함수
+function updateTranslateButtonState() {
+  const translateBtn = document.getElementById("translate-btn");
+  const checkboxes = document.querySelectorAll('#file-list input[type="checkbox"]:checked');
+  if (translateBtn) {
+    translateBtn.disabled = checkboxes.length === 0;
+    if (translateBtn.disabled) {
+      translateBtn.classList.add("bg-blue-300", "cursor-not-allowed");
+      translateBtn.classList.remove("bg-blue-600", "hover:bg-blue-700");
+    } else {
+      translateBtn.classList.remove("bg-blue-300", "cursor-not-allowed");
+      translateBtn.classList.add("bg-blue-600");
     }
   }
 }
@@ -447,18 +469,39 @@ function triggerFileSelect() {
   }
 }
 
+// 번역 버튼 활성화/비활성화 유틸 함수
+function updateTranslateButtonState() {
+  const translateBtn = document.getElementById("translate-btn");
+  const checkboxes = document.querySelectorAll('#file-list input[type="checkbox"]:checked');
+  if (translateBtn) {
+    translateBtn.disabled = checkboxes.length === 0;
+    if (translateBtn.disabled) {
+      translateBtn.classList.add("bg-blue-300", "cursor-not-allowed");
+      translateBtn.classList.remove("bg-blue-600", "hover:bg-blue-700");
+    } else {
+      translateBtn.classList.remove("bg-blue-300", "cursor-not-allowed");
+      translateBtn.classList.add("bg-blue-600");
+    }
+  }
+}
+
 // 번역 기능
 function translateSelected() {
+  // 고급 체크박스 상태 읽기
+  const advancedCheckbox = document.getElementById('advanced-translate-checkbox');
+  const isAdvanced = advancedCheckbox && advancedCheckbox.checked;
+
   console.log("[FRONTEND] translateSelected 함수 호출됨");
 
   const checkboxes = document.querySelectorAll(
-    'input[type="checkbox"]:checked',
+    '#file-list input[type="checkbox"]:checked',
   );
   console.log("[FRONTEND] 선택된 체크박스 수:", checkboxes.length);
 
   if (checkboxes.length === 0) {
     console.log("[FRONTEND] 선택된 파일이 없음");
     alert("번역할 파일을 선택해주세요.");
+    updateTranslateButtonState();
     return;
   }
 
@@ -466,10 +509,22 @@ function translateSelected() {
   const firstFile = checkboxes[0].value;
   console.log("[FRONTEND] 첫 번째 선택된 파일:", firstFile);
 
-  startTranslation(firstFile);
+  startTranslation(firstFile, isAdvanced);
 }
 
-function startTranslation(filePath) {
+// 변환 기능
+function convertSelected() {
+  console.log("[FRONTEND] convertSelected 함수 호출됨");
+
+  const checkboxes = document.querySelectorAll('input[type="checkbox"]:checked');
+  if (checkboxes.length === 0) {
+    alert("변환할 PDF 파일을 선택해주세요.");
+    return;
+  }
+  // ... (나머지 convertSelected 본문)
+}
+
+function startTranslation(filePath, isAdvanced = false) {
   console.log("[FRONTEND] === startTranslation 시작 ===");
   console.log("[FRONTEND] 파일 경로:", filePath);
 
@@ -484,9 +539,17 @@ function startTranslation(filePath) {
   console.log("[FRONTEND] translation-container 요소:", rightPanel);
 
   if (!rightPanel) {
-    console.error("[FRONTEND] translation-container 요소를 찾을 수 없습니다!");
-    alert("UI 오류: translation-container를 찾을 수 없습니다.");
+    rightPanel.innerHTML =
+      '<div class="p-4 text-red-500">오류: 번역 결과를 표시할 영역을 찾을 수 없습니다.</div>';
     return;
+  }
+
+  // 번역 버튼 비활성화
+  const translateBtn = document.getElementById("translate-btn");
+  if (translateBtn) {
+    translateBtn.disabled = true;
+    translateBtn.classList.add("bg-blue-300", "cursor-not-allowed");
+    translateBtn.classList.remove("bg-blue-600", "hover:bg-blue-700");
   }
 
   const fileName = filePath.split(/[\\/]/).pop();
@@ -531,7 +594,7 @@ function startTranslation(filePath) {
   fetch("/api/translate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ path: filePath }),
+    body: JSON.stringify({ path: filePath, advanced: isAdvanced }),
   })
     .then((res) => {
       console.log("[FRONTEND] 번역 시작 응답 상태:", res.status);
@@ -558,6 +621,12 @@ function startTranslation(filePath) {
         </button>
       </div>
     `;
+      // 번역 실패 시 버튼 다시 활성화
+      if (translateBtn) {
+        translateBtn.disabled = false;
+        translateBtn.classList.remove("bg-blue-300", "cursor-not-allowed");
+        translateBtn.classList.add("bg-blue-600");
+      }
     });
 
   console.log("[FRONTEND] === startTranslation 완료 ===");
@@ -630,6 +699,40 @@ function startTranslationStatusCheck(filePath) {
     checkTranslationStatus(filePath);
   }, 2000);
 }
+
+// 번역 상태 polling에서 완료/실패 시 버튼 다시 활성화
+const origCheckTranslationStatus = checkTranslationStatus;
+checkTranslationStatus = function(filePath) {
+  fetch(
+    `/api/translation-status?path=${encodeURIComponent(filePath)}&include_partial=true`,
+  )
+    .then((res) => {
+      if (!res.ok) {
+        throw new Error(`HTTP 오류 ${res.status}`);
+      }
+      return res.json();
+    })
+    .then((data) => {
+      if (data.status === "completed" || data.status === "done") {
+        // 번역 완료
+        clearInterval(translationStatusInterval);
+        translationStatusInterval = null;
+        updateTranslateButtonState();
+      } else if (data.status === "error" || data.status === "failed") {
+        clearInterval(translationStatusInterval);
+        translationStatusInterval = null;
+        updateTranslateButtonState();
+      } else if (data.status === "running") {
+        updateTranslationProgress(data);
+      } else {
+        console.log("[FRONTEND] 알 수 없는 상태:", data.status);
+      }
+    })
+    .catch((error) => {
+      console.error("[FRONTEND] 상태 확인 실패:", error);
+      setTimeout(() => checkTranslationStatus(filePath), 5000);
+    });
+};
 
 // 번역 상태 확인
 function checkTranslationStatus(filePath) {
@@ -882,6 +985,12 @@ function showTranslationResult(filePath) {
 
 // 초기화
 document.addEventListener("DOMContentLoaded", () => {
+  // 변환 버튼
+  const convertBtn = document.getElementById("convert-btn");
+  if (convertBtn) {
+    convertBtn.addEventListener("click", convertSelected);
+  }
+
   console.log("페이지 로드 완료");
 
   // 커스텀 이벤트 리스너 (app.py에서 발생시키는 이벤트)
@@ -926,9 +1035,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const viewMdBtn = document.getElementById("view-md-btn");
   if (viewMdBtn) {
     viewMdBtn.addEventListener("click", () => {
-      if (currentFile && currentOriginalMarkdownPath) toggleLeftPanelView("md");
+      if (currentFile && currentOriginalMarkdownPath) {
+        toggleLeftPanelView("md");
+      }
     });
   }
+
 
   // API 준비 확인
   let attempts = 0;

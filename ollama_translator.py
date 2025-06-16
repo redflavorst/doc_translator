@@ -14,6 +14,8 @@ from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from typing import List, Tuple
+from progress_manager import progress_manager
+from argos_translator import MarkdownTranslator, TranslationUnit
 
 
 class SupportedLanguage(Enum):
@@ -110,16 +112,41 @@ class MultilingualTranslator:
         translated = self.preserver.restore(result, elements)
         return translated
 
-    def translate_markdown(self, markdown: str, source_lang: str) -> str:
-        blocks = re.split(r"\n\s*\n", markdown)
+    def translate_markdown(self, markdown: str, source_lang: str, path: str = None) -> str:
+        # Argos 방식과 동일하게 units 분할
+        translator = MarkdownTranslator(source_lang, "ko")
+        units = translator.split_into_units(markdown)
         results: List[str] = []
-        for block in blocks:
-            block = block.strip()
-            if not block:
-                results.append("")
-                continue
-            results.append(self.translate_unit(block, source_lang))
-        return "\n\n".join(results)
+        total_chunks = len(units)
+        # 각 청크 정보 구성 (chunk index, type, size, status)
+        chunks_info = [
+            {"index": i, "type": unit.unit_type, "size": len(unit.content), "status": "pending"}
+            for i, unit in enumerate(units)
+        ]
+        if path:
+            progress_manager.set_total_chunks(path, total_chunks, chunks_info)
+        try:
+            for idx, unit in enumerate(units):
+                if path:
+                    progress_manager.update_chunk_progress(path, idx, "processing")
+                if not unit.is_translatable:
+                    results.append(unit.content)
+                    if path:
+                        progress_manager.add_chunk_result(path, idx, unit.content)
+                    continue
+                # LLM 번역
+                translated = self.translate_unit(unit.content, source_lang)
+                results.append(translated)
+                if path:
+                    progress_manager.add_chunk_result(path, idx, translated)
+            if path:
+                progress_manager.finish(path)
+        except Exception as e:
+            if path:
+                progress_manager.error(path, str(e))
+            raise
+        # 번역 결과를 원래 구조대로 조립
+        return "\n".join(results)
 
 
 def translate_pdf_to_korean(pdf_path: str, model_name: str = "gemma3:4b") -> str:

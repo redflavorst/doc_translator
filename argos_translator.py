@@ -96,13 +96,21 @@ class MarkdownTranslator:
         return [s.strip() for s in sentences if s.strip()]
 
     def translate_unit(self, unit: TranslationUnit) -> str:
-        if not unit.is_translatable or not ARGOS_AVAILABLE:
+        if not unit.is_translatable:
             return unit.content
+        if not ARGOS_AVAILABLE:
+            return f"[Argos Translate 번역 실패: 번역 엔진이 설치되어 있지 않습니다]"
         src = self.detected_language if self.source_lang == "auto" and self.detected_language else self.source_lang
         try:
-            return argostranslate.translate.translate(unit.content, src, self.target_lang)
-        except Exception:
-            return unit.content
+            result = argostranslate.translate.translate(unit.content, src, self.target_lang)
+            # 번역이 원본과 같으면 번역 실패로 간주
+            if result.strip() == unit.content.strip():
+                preview = unit.content[:30].replace('\n', ' ')
+                return f"[Argos Translate 번역 실패: '{preview}...']"
+            return result
+        except Exception as e:
+            preview = unit.content[:30].replace('\n', ' ')
+            return f"[Argos Translate 번역 실패: '{preview}...']"
 
     def translate_document(self, markdown_text: str, split_by_sentence: bool = False) -> List[str]:
         if self.source_lang == "auto":

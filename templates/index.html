@@ -236,9 +236,16 @@
       </button>
     </div>
     <div class="flex items-center space-x-3">
-      <button id="translate-btn" class="px-4 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 transition-colors">
-        번역하기
-      </button>
+      <button id="convert-btn" class="px-4 py-2 bg-neutral-200 text-blue-700 font-medium rounded-md hover:bg-blue-200 transition-colors mr-1">
+         변환하기
+       </button>
+        <label class="flex items-center space-x-1 mr-2 select-none">
+          <input type="checkbox" id="advanced-translate-checkbox" class="form-checkbox accent-blue-600" />
+          <span class="text-sm text-white">고급</span>
+        </label>
+        <button id="translate-btn" class="px-4 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 transition-colors" disabled>
+          번역하기
+        </button>
       <div class="flex items-center space-x-1 text-neutral-300">
         <button class="p-1 hover:bg-blue-600 rounded-sm transition-colors"><span class="local-icon minimize"></span></button>
         <button class="p-1 hover:bg-blue-600 rounded-sm transition-colors"><span class="local-icon maximize"></span></button>

@@ -22,7 +22,7 @@ def get_translated_file_path(original_input_path_str: str) -> Path:
     file_stem = original_input_path.stem
     return DATA_ROOT_DIR / file_stem / (file_stem + '_translated.md')
 
-def run_translation(path: str):
+def run_translation(path: str, advanced: bool = False):
     """
     Runs the translation pipeline for a given file (PDF or Markdown).
     The output will be structured under DATA_ROOT_DIR/filename_stem/
@@ -48,29 +48,39 @@ def run_translation(path: str):
         markdown_content_for_translation: str
 
         if input_file_path.suffix.lower() == '.md':
-            # If input is already Markdown, read its content
             markdown_content_for_translation = input_file_path.read_text(encoding='utf-8')
-            # Save a copy to the new structured directory
             original_md_target_path.write_text(markdown_content_for_translation, encoding='utf-8')
-            logger.info(f"Original Markdown copied to: {original_md_target_path}")
         elif input_file_path.suffix.lower() == '.pdf':
-            # Convert PDF to Markdown content string
             markdown_content_for_translation = convert_pdf_to_markdown(input_file_path)
-            
             if not markdown_content_for_translation:
                 err_msg = f"Markdown conversion failed or returned empty content for {input_file_path}"
                 logger.error(err_msg)
                 raise Exception(err_msg)
-            
             # Save the converted Markdown content to our target path
             original_md_target_path.write_text(markdown_content_for_translation, encoding='utf-8')
             logger.info(f"Converted Markdown from PDF saved to: {original_md_target_path}")
         else:
             unsupported_msg = f"File type {input_file_path.suffix} is not directly supported. Please provide a PDF or Markdown file."
             logger.error(unsupported_msg)
-            progress_manager.error(path, unsupported_msg)
-            # Return an error structure consistent with other returns
-            return {'status': 'error', 'error': unsupported_msg} 
+            raise Exception(unsupported_msg)
+
+        # 3. 번역 수행 및 결과 저장
+        try:
+            if advanced:
+                from ollama_translator import MultilingualTranslator, TranslationConfig
+                config = TranslationConfig()
+                translator = MultilingualTranslator(config)
+                translated_md = translator.translate_markdown(markdown_content_for_translation, config.source_lang.value, path=path)
+            else:
+                from argos_translator import translate_markdown
+                translated_md = translate_markdown(markdown_content_for_translation, path=path)
+            translated_md_target_path = current_file_output_dir / (file_stem + '_translated.md')
+            translated_md_target_path.write_text(translated_md, encoding='utf-8')
+            logger.info(f"Translated Markdown saved to: {translated_md_target_path}")
+        except Exception as e:
+            logger.error(f"Translation failed for {input_file_path}: {e}")
+            progress_manager.error(path, str(e))
+            raise
 
         # 3. Translate the Markdown content
         # translate_markdown should take the actual markdown string and return translated markdown string.

@@ -422,23 +422,28 @@ def convert_pdf_to_markdown():
                 'error': f'PDF 파일을 찾을 수 없습니다: {pdf_path}'
             }), 404
             
-        # 출력 디렉토리 설정
-        output_dir_path = Path(output_dir).resolve() if output_dir else None
-        
-        # 변환 실행
+        # 변환 결과 저장 경로 생성 (data_translated/<stem>/<stem>.md)
+        pdf_stem = pdf_path.stem
+        output_dir_final = Path('data_translated') / pdf_stem
+        output_dir_final.mkdir(parents=True, exist_ok=True)
+        markdown_path = output_dir_final / f"{pdf_stem}.md"
+
+        # 변환 실행 (file_utils에서 Markdown 문자열 반환)
         try:
-            markdown_path = file_utils.convert_pdf_to_markdown(
+            markdown_content = file_utils.convert_pdf_to_markdown(
                 pdf_path=pdf_path,
-                output_dir=output_dir_path,
                 use_ocr=use_ocr
             )
-            
+            # 파일로 저장
+            with open(markdown_path, 'w', encoding='utf-8') as f:
+                f.write(markdown_content)
+
             # 파일 크기 확인 (KB 단위)
             file_size_kb = os.path.getsize(markdown_path) / 1024
-            
+
             return jsonify({
                 'success': True,
-                'markdown_path': markdown_path,
+                'markdown_path': str(markdown_path),
                 'file_size_kb': round(file_size_kb, 2)
             })
             
@@ -786,8 +791,9 @@ def view_pdf():
 @app.route('/api/translate', methods=['POST'])
 def translate():
     path = request.json['path']
-    # 데몬 스레드로 설정하여 프로그램 종료 시 자동으로 종료되도록 함
-    thread = threading.Thread(target=tasks.run_translation, args=(path,), daemon=True)
+    advanced = request.json.get('advanced', False)
+    # run translation in background thread
+    thread = threading.Thread(target=tasks.run_translation, args=(path, advanced), daemon=True)
     thread.start()
     return jsonify({'status': 'started', 'path': path})
 
